@@ -268,7 +268,11 @@ var WebRTCPlayer = /** @class */ (function () {
         this.stop();
     };
     WebRTCPlayer.prototype._reportStatus = function () {
-        this.onStateChanged(this.isMuted, this.isPlaying, this.lastError);
+        this.onStateChanged({
+            isMuted: this.isMuted,
+            isPlaying: this.isPlaying,
+            error: this.lastError
+        });
     };
     return WebRTCPlayer;
 }());

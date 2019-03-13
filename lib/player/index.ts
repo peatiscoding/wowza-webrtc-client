@@ -7,6 +7,12 @@ window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnecti
 window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
 window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
 
+export interface WebRTCPlayerStatus {
+  isMuted?: boolean
+  isPlaying: boolean
+  error?: Error
+}
+
 export class WebRTCPlayer {
 
   private userData = {param1:"value1"}
@@ -38,7 +44,7 @@ export class WebRTCPlayer {
     return !!this.peerConnection
   }
 
-  constructor(private config: WebRTCConfiguration, private hostElement: HTMLVideoElement, private onStateChanged: (isMuted: boolean|undefined, isPlaying: boolean, error?: Error) => void) {
+  constructor(private config: WebRTCConfiguration, private hostElement: HTMLVideoElement, private onStateChanged: (status: WebRTCPlayerStatus) => void) {
     // do something
 
     // As for mobile .. allow autoPlay, always muted the audio by default.
@@ -229,6 +235,10 @@ export class WebRTCPlayer {
   }
 
   private _reportStatus() {
-    this.onStateChanged(this.isMuted, this.isPlaying, this.lastError)
+    this.onStateChanged({ 
+      isMuted: this.isMuted, 
+      isPlaying: this.isPlaying, 
+      error: this.lastError
+    })
   }
 }

@@ -1,4 +1,9 @@
 import { WebRTCConfiguration } from '../interface';
+export interface WebRTCPlayerStatus {
+    isMuted?: boolean;
+    isPlaying: boolean;
+    error?: Error;
+}
 export declare class WebRTCPlayer {
     private config;
     private hostElement;
@@ -9,7 +14,7 @@ export declare class WebRTCPlayer {
     private connecting?;
     isMuted: boolean | undefined;
     readonly isPlaying: boolean;
-    constructor(config: WebRTCConfiguration, hostElement: HTMLVideoElement, onStateChanged: (isMuted: boolean | undefined, isPlaying: boolean, error?: Error) => void);
+    constructor(config: WebRTCConfiguration, hostElement: HTMLVideoElement, onStateChanged: (status: WebRTCPlayerStatus) => void);
     /**
      * Connect to WebRTC source, acquire media, and attach to target videoElement.
      *
