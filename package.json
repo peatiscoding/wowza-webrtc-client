@@ -1,16 +1,21 @@
 {
   "name": "wowza-webrtc-client",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "WoWza WebRTC Player/Client.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
+    "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "rm -fr dist",
     "build": "npm run clean && tsc -p tsconfig.json"
   },
   "author": "Kittiphat S.",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peatiscoding/wowza-webrtc-client"
+  },
   "devDependencies": {
     "typescript": "^3.3.3333"
   },
