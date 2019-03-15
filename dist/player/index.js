@@ -37,19 +37,21 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var lodash_1 = require("lodash");
 var utils_1 = require("../utils");
-// Normalize all platform dependencies
-window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
-window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
 var WebRTCPlayer = /** @class */ (function () {
     function WebRTCPlayer(config, hostElement, onStateChanged) {
-        // do something
         var _this = this;
         this.config = config;
         this.hostElement = hostElement;
         this.onStateChanged = onStateChanged;
         this.userData = { param1: "value1" };
         this.peerConnection = undefined;
+        // do something
+        if (!!window) {
+            // Normalize all platform dependencies
+            window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+            window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
+            window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
+        }
         // As for mobile .. allow autoPlay, always muted the audio by default.
         if (utils_1.isMobileBrowser()) {
             this.hostElement.muted = true;

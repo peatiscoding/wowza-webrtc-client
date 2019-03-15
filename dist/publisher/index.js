@@ -38,11 +38,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var SDPMessageProcessor_1 = require("./SDPMessageProcessor");
 var lodash_1 = require("lodash");
 var utils_1 = require("../utils");
-// Normalize all platform dependencies
-navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
-window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
-window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
 var WebRTCPublisher = /** @class */ (function () {
     function WebRTCPublisher(config, statusListener) {
         var _this = this;
@@ -63,6 +58,11 @@ var WebRTCPublisher = /** @class */ (function () {
         if (!utils_1.supportGetUserMedia()) {
             throw new Error('Your browser does not support getUserMedia API');
         }
+        // Normalize window/navigator APIs
+        navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
+        window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+        window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
+        window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
         console.log('WebRTC Handler started (agent=', this.userAgent, ')');
         utils_1.queryForCamera(this.streamSourceConstraints)
             .then(function (hasCamera) { return _this.isCameraMuted = !hasCamera; })

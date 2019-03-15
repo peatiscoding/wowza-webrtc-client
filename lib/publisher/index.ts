@@ -3,12 +3,6 @@ import { SDPMessageProcessor } from './SDPMessageProcessor'
 import { forEach } from 'lodash'
 import { supportGetUserMedia, queryForCamera, getUserMedia } from '../utils'
 
-// Normalize all platform dependencies
-navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia
-window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection
-window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
-window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
-
 export class WebRTCPublisher {
 
   private userAgent = navigator.userAgent
@@ -73,6 +67,12 @@ export class WebRTCPublisher {
     if (!supportGetUserMedia()) {
       throw new Error('Your browser does not support getUserMedia API')
     }
+
+    // Normalize window/navigator APIs
+    navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia
+    window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection
+    window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
+    window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
 
     console.log('WebRTC Handler started (agent=', this.userAgent, ')')
     queryForCamera(this.streamSourceConstraints)

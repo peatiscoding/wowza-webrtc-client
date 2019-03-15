@@ -2,11 +2,6 @@ import { WebRTCConfiguration } from '../interface'
 import { get } from 'lodash'
 import CancellablePromise, { isMobileBrowser, cancellable } from '../utils'
 
-// Normalize all platform dependencies
-window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
-window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
-
 export interface WebRTCPlayerStatus {
   isMuted?: boolean
   isPlaying: boolean
@@ -46,6 +41,12 @@ export class WebRTCPlayer {
 
   constructor(private config: WebRTCConfiguration, private hostElement: HTMLVideoElement, private onStateChanged: (status: WebRTCPlayerStatus) => void) {
     // do something
+    if (!!window) {
+      // Normalize all platform dependencies
+      window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+      window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
+      window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
+    }
 
     // As for mobile .. allow autoPlay, always muted the audio by default.
     if (isMobileBrowser()) {
