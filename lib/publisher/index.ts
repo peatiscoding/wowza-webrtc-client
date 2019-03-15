@@ -1,17 +1,22 @@
 import { WebRTCConfiguration } from '../interface'
 import { SDPMessageProcessor } from './SDPMessageProcessor'
 import { forEach } from 'lodash'
+import { supportGetUserMedia, queryForCamera, getUserMedia } from '../utils'
 
 // Normalize all platform dependencies
-navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
-window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
-window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
+navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia
+window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection
+window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
+window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
 
 export class WebRTCPublisher {
 
   private userAgent = navigator.userAgent
   private localStream?: MediaStream                         // if set, preview stream is available.
+  private streamSourceConstraints: MediaStreamConstraints = {
+    video: true,
+    audio: true
+  }
   private peerConnection?: RTCPeerConnection = undefined    // if set, we are publishing.
   private wsConnection?: WebSocket = undefined
   private userData = {param1:"value1"}
@@ -65,15 +70,15 @@ export class WebRTCPublisher {
 
   constructor(private config: WebRTCConfiguration, private statusListener?: () => void) {
     // Validate if browser support getUserMedia or not?
-    if (!(navigator.mediaDevices.getUserMedia || navigator.getUserMedia)) {
+    if (!supportGetUserMedia()) {
       throw new Error('Your browser does not support getUserMedia API')
     }
 
     console.log('WebRTC Handler started (agent=', this.userAgent, ')')
-    this.queryForCamera()
+    queryForCamera(this.streamSourceConstraints)
       .then(hasCamera => this.isCameraMuted = !hasCamera)
       .catch(error => {
-        console.error('Unable to locate Camera', error)
+        console.error('[Publisher] Unable to locate Camera', error)
       })
   }
 
@@ -82,7 +87,7 @@ export class WebRTCPublisher {
    */
   public async attachUserMedia(videoElement: HTMLVideoElement) {
     // Try getting user media.
-    const stream = await this.getUserMedia()
+    const stream = await getUserMedia(this.streamSourceConstraints)
 
     // Camera is not muted. (Camera is available.)
     this.isCameraMuted = false
@@ -93,7 +98,7 @@ export class WebRTCPublisher {
     try {
       videoElement.srcObject = stream
     } catch(elementError) {
-      console.error('attaching video.srcObject failed, Fallback to src ...', videoElement, stream)
+      console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', videoElement, stream)
       videoElement.src = window.URL.createObjectURL(stream)
     }
 
@@ -141,7 +146,7 @@ export class WebRTCPublisher {
     wsConnection.binaryType = 'arraybuffer'
 
     wsConnection.onopen = async () => {
-      console.log('wsConnection.onopen')
+      console.log('[Publisher] wsConnection.onopen')
 
       const localStream = this.localStream
       if (!localStream) {
@@ -153,7 +158,7 @@ export class WebRTCPublisher {
       const peerConnection = new RTCPeerConnection({ iceServers: [] })
       peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
         if (event.candidate != null) {
-          console.log(`gotIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
+          console.log(`[Publisher] gotIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
         }
       }
   
@@ -193,7 +198,7 @@ export class WebRTCPublisher {
         this.peerConnection = peerConnection
         this.statusListener && this.statusListener()
 
-        console.log('Publishing with streamName=', streamName)
+        console.log('[Publisher] Publishing with streamName=', streamName)
 
       } catch (error) {
         console.error('Failed while waiting for offer result', error)
@@ -224,7 +229,7 @@ export class WebRTCPublisher {
 
       const sdpData = msgJSON['sdp']
       if (sdpData !== undefined) {
-        console.log(`sdp: ${sdpData}`)
+        console.log(`[Publisher] sdp: ${sdpData}`)
 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))
       }
@@ -232,7 +237,7 @@ export class WebRTCPublisher {
       const iceCandidates = msgJSON['iceCandidates']
       if (iceCandidates !== undefined) {
         for(const index in iceCandidates) {
-          console.log('iceCandidates: ' + iceCandidates[index]);
+          console.log('i[Publisher] ceCandidates: ' + iceCandidates[index]);
           await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]));
         }
       }
@@ -246,7 +251,7 @@ export class WebRTCPublisher {
     wsConnection.onclose = () => console.log('[Publisher] wsConnection.onclose')
 
     wsConnection.onerror = (evt) => {
-      console.log("wsConnection.onerror: "+JSON.stringify(evt));
+      console.log("[Publisher] wsConnection.onerror: "+JSON.stringify(evt));
       this._reportError(new Error(JSON.stringify(evt)))
     }
 
@@ -269,13 +274,13 @@ export class WebRTCPublisher {
     this._stopStream()
     this.statusListener && this.statusListener()
 
-    console.log("Disconnected")
+    console.log("[Publisher] Disconnected")
   }
 
   private _stopStream() {
     // if there is a localStream object, and they are no longer used.
     if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
-      console.log('Trying to stop stream', this.localStream)
+      console.log('[Publisher] Trying to stop stream', this.localStream)
       if (this.localStream.stop) {
         this.localStream.stop()
       } else {
@@ -285,36 +290,5 @@ export class WebRTCPublisher {
       }
       this.localStream = undefined
     }
-  }
-
-  private async queryForCamera(): Promise<boolean> {
-    if (navigator.mediaDevices.enumerateDevices) {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      return devices.filter(o => /video/.test(o.kind)).length > 0
-    }
-    const media = await this.getUserMedia()
-    if (media) {
-      media.stop()
-      return true
-    }
-    return false
-  }
-
-  /**
-   * Query user media stream from navigator object.
-   */
-  private async getUserMedia(): Promise<MediaStream> {
-    const constraints: MediaStreamConstraints = { video: true, audio: true }
-    // if there is mediaDevices API.
-    if (navigator.mediaDevices.getUserMedia) {
-      return navigator.mediaDevices.getUserMedia(constraints)
-    }
-    return new Promise((resolve, reject) => {
-      if (navigator.getUserMedia) {
-        navigator.getUserMedia(constraints, resolve, reject)
-      } else {
-        reject(new Error('Your browser does not support getUserMedia API.'))
-      }
-    })
   }
 }

@@ -4,6 +4,7 @@ export declare class WebRTCPublisher {
     private statusListener?;
     private userAgent;
     private localStream?;
+    private streamSourceConstraints;
     private peerConnection?;
     private wsConnection?;
     private userData;
@@ -31,9 +32,4 @@ export declare class WebRTCPublisher {
     private _reportError;
     disconnect(): Promise<void>;
     private _stopStream;
-    private queryForCamera;
-    /**
-     * Query user media stream from navigator object.
-     */
-    private getUserMedia;
 }

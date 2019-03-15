@@ -28,3 +28,52 @@ export const cancellable = <T> (executor: Executor<T>): CancellablePromise<T> =>
   o!.cancel = canceller
   return o!
 }
+
+export const supportGetUserMedia = (): boolean => {
+  // has navigator
+  // also ...
+  // = has .mediaDevices && .mediaDevices.getUserMedia
+  // or ...
+  // = has .getUserMedia
+  return navigator && (navigator.mediaDevices && !!navigator.mediaDevices.getUserMedia || !!navigator.getUserMedia)
+}
+
+/**
+ * Query user media stream from navigator object.
+ * 
+ * @param constraints 
+ */
+export const getUserMedia = async (constraints: MediaStreamConstraints): Promise<MediaStream> => {
+  if (!navigator) {
+    throw new Error('Your browser does not support getUserMedia API.')
+  }
+  // if there is mediaDevices API.
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    return navigator.mediaDevices.getUserMedia(constraints)
+  }
+  return new Promise((resolve, reject) => {
+    if (navigator.getUserMedia) {
+      navigator.getUserMedia(constraints, resolve, reject)
+    } else {
+      reject(new Error('Your browser does not support getUserMedia API.'))
+    }
+  })
+}
+
+/**
+ * Query browser for Camera device based on given constraints
+ * 
+ * @param constraints 
+ */
+export const queryForCamera = async (constraints: MediaStreamConstraints): Promise<boolean> => {
+  if (navigator && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    return devices.filter(o => /video/.test(o.kind)).length > 0
+  }
+  const media = await getUserMedia(constraints)
+  if (media) {
+    media.stop()
+    return true
+  }
+  return false
+}

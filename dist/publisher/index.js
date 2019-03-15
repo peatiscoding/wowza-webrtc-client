@@ -37,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var SDPMessageProcessor_1 = require("./SDPMessageProcessor");
 var lodash_1 = require("lodash");
+var utils_1 = require("../utils");
 // Normalize all platform dependencies
 navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
 window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
@@ -48,6 +49,10 @@ var WebRTCPublisher = /** @class */ (function () {
         this.config = config;
         this.statusListener = statusListener;
         this.userAgent = navigator.userAgent;
+        this.streamSourceConstraints = {
+            video: true,
+            audio: true
+        };
         this.peerConnection = undefined; // if set, we are publishing.
         this.wsConnection = undefined;
         this.userData = { param1: "value1" };
@@ -55,14 +60,14 @@ var WebRTCPublisher = /** @class */ (function () {
         this.statusCameraMuted = true;
         this._lastError = undefined;
         // Validate if browser support getUserMedia or not?
-        if (!(navigator.mediaDevices.getUserMedia || navigator.getUserMedia)) {
+        if (!utils_1.supportGetUserMedia()) {
             throw new Error('Your browser does not support getUserMedia API');
         }
         console.log('WebRTC Handler started (agent=', this.userAgent, ')');
-        this.queryForCamera()
+        utils_1.queryForCamera(this.streamSourceConstraints)
             .then(function (hasCamera) { return _this.isCameraMuted = !hasCamera; })
             .catch(function (error) {
-            console.error('Unable to locate Camera', error);
+            console.error('[Publisher] Unable to locate Camera', error);
         });
     }
     Object.defineProperty(WebRTCPublisher.prototype, "isHolding", {
@@ -129,7 +134,7 @@ var WebRTCPublisher = /** @class */ (function () {
             var stream;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getUserMedia()
+                    case 0: return [4 /*yield*/, utils_1.getUserMedia(this.streamSourceConstraints)
                         // Camera is not muted. (Camera is available.)
                     ];
                     case 1:
@@ -142,7 +147,7 @@ var WebRTCPublisher = /** @class */ (function () {
                             videoElement.srcObject = stream;
                         }
                         catch (elementError) {
-                            console.error('attaching video.srcObject failed, Fallback to src ...', videoElement, stream);
+                            console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', videoElement, stream);
                             videoElement.src = window.URL.createObjectURL(stream);
                         }
                         // save videoElement
@@ -199,7 +204,7 @@ var WebRTCPublisher = /** @class */ (function () {
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                console.log('wsConnection.onopen');
+                                console.log('[Publisher] wsConnection.onopen');
                                 localStream = this.localStream;
                                 if (!localStream) {
                                     err = new Error('Invalid state, open connection without video stream to publish.');
@@ -209,7 +214,7 @@ var WebRTCPublisher = /** @class */ (function () {
                                 peerConnection = new RTCPeerConnection({ iceServers: [] });
                                 peerConnection.onicecandidate = function (event) {
                                     if (event.candidate != null) {
-                                        console.log("gotIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
+                                        console.log("[Publisher] gotIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
                                     }
                                 };
                                 pc = peerConnection;
@@ -249,7 +254,7 @@ var WebRTCPublisher = /** @class */ (function () {
                                 wsConnection.send('{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}');
                                 this.peerConnection = peerConnection;
                                 this.statusListener && this.statusListener();
-                                console.log('Publishing with streamName=', streamName);
+                                console.log('[Publisher] Publishing with streamName=', streamName);
                                 return [3 /*break*/, 5];
                             case 4:
                                 error_1 = _a.sent();
@@ -282,7 +287,7 @@ var WebRTCPublisher = /** @class */ (function () {
                                 }
                                 sdpData = msgJSON['sdp'];
                                 if (!(sdpData !== undefined)) return [3 /*break*/, 2];
-                                console.log("sdp: " + sdpData);
+                                console.log("[Publisher] sdp: " + sdpData);
                                 return [4 /*yield*/, peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))];
                             case 1:
                                 _c.sent();
@@ -298,7 +303,7 @@ var WebRTCPublisher = /** @class */ (function () {
                             case 3:
                                 if (!(_i < _a.length)) return [3 /*break*/, 6];
                                 index = _a[_i];
-                                console.log('iceCandidates: ' + iceCandidates[index]);
+                                console.log('i[Publisher] ceCandidates: ' + iceCandidates[index]);
                                 return [4 /*yield*/, peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]))];
                             case 4:
                                 _c.sent();
@@ -317,7 +322,7 @@ var WebRTCPublisher = /** @class */ (function () {
                 }); };
                 wsConnection.onclose = function () { return console.log('[Publisher] wsConnection.onclose'); };
                 wsConnection.onerror = function (evt) {
-                    console.log("wsConnection.onerror: " + JSON.stringify(evt));
+                    console.log("[Publisher] wsConnection.onerror: " + JSON.stringify(evt));
                     _this._reportError(new Error(JSON.stringify(evt)));
                 };
                 // save it.
@@ -339,7 +344,7 @@ var WebRTCPublisher = /** @class */ (function () {
                 this.wsConnection = undefined;
                 this._stopStream();
                 this.statusListener && this.statusListener();
-                console.log("Disconnected");
+                console.log("[Publisher] Disconnected");
                 return [2 /*return*/];
             });
         });
@@ -347,7 +352,7 @@ var WebRTCPublisher = /** @class */ (function () {
     WebRTCPublisher.prototype._stopStream = function () {
         // if there is a localStream object, and they are no longer used.
         if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
-            console.log('Trying to stop stream', this.localStream);
+            console.log('[Publisher] Trying to stop stream', this.localStream);
             if (this.localStream.stop) {
                 this.localStream.stop();
             }
@@ -359,52 +364,6 @@ var WebRTCPublisher = /** @class */ (function () {
             }
             this.localStream = undefined;
         }
-    };
-    WebRTCPublisher.prototype.queryForCamera = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var devices, media;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!navigator.mediaDevices.enumerateDevices) return [3 /*break*/, 2];
-                        return [4 /*yield*/, navigator.mediaDevices.enumerateDevices()];
-                    case 1:
-                        devices = _a.sent();
-                        return [2 /*return*/, devices.filter(function (o) { return /video/.test(o.kind); }).length > 0];
-                    case 2: return [4 /*yield*/, this.getUserMedia()];
-                    case 3:
-                        media = _a.sent();
-                        if (media) {
-                            media.stop();
-                            return [2 /*return*/, true];
-                        }
-                        return [2 /*return*/, false];
-                }
-            });
-        });
-    };
-    /**
-     * Query user media stream from navigator object.
-     */
-    WebRTCPublisher.prototype.getUserMedia = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var constraints;
-            return __generator(this, function (_a) {
-                constraints = { video: true, audio: true };
-                // if there is mediaDevices API.
-                if (navigator.mediaDevices.getUserMedia) {
-                    return [2 /*return*/, navigator.mediaDevices.getUserMedia(constraints)];
-                }
-                return [2 /*return*/, new Promise(function (resolve, reject) {
-                        if (navigator.getUserMedia) {
-                            navigator.getUserMedia(constraints, resolve, reject);
-                        }
-                        else {
-                            reject(new Error('Your browser does not support getUserMedia API.'));
-                        }
-                    })];
-            });
-        });
     };
     return WebRTCPublisher;
 }());
