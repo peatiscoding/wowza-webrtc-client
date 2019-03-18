@@ -107,7 +107,12 @@ exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0
             case 3:
                 media = _a.sent();
                 if (media) {
-                    media.stop();
+                    if (media.stop) {
+                        media.stop();
+                    }
+                    else {
+                        media.getTracks().forEach(function (t) { return t.stop(); });
+                    }
                     return [2 /*return*/, true];
                 }
                 return [2 /*return*/, false];
