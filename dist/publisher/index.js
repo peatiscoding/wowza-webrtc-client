@@ -63,6 +63,7 @@ var WebRTCPublisher = /** @class */ (function () {
         window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
         window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
         window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
+        window.URL = window.URL || window.webkitURL;
         console.log('WebRTC Handler started (agent=', this.userAgent, ')');
         utils_1.queryForCamera(this.streamSourceConstraints)
             .then(function (hasCamera) { return _this.isCameraMuted = !hasCamera; })

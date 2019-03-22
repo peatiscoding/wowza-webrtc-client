@@ -51,6 +51,7 @@ var WebRTCPlayer = /** @class */ (function () {
             window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
             window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
             window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
+            window.URL = window.URL || window.webkitURL;
         }
         // As for mobile .. allow autoPlay, always muted the audio by default.
         if (utils_1.isMobileBrowser()) {

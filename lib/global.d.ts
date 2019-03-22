@@ -9,6 +9,7 @@ interface Window {
   RTCSessionDescription: any
   mozRTCSessionDescription: any
   webkitRTCSessionDescription: any
+  webkitURL: any
 }
 
 interface Navigator {
