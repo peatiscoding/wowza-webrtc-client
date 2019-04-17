@@ -12,6 +12,9 @@ export declare class WebRTCPlayer {
     private peerConnection?;
     private lastError?;
     private connecting?;
+    private currentStreamName?;
+    private static _currentStreams;
+    static currentStream(streamName: string): MediaStream | undefined;
     isMuted: boolean | undefined;
     readonly isPlaying: boolean;
     constructor(config: WebRTCConfiguration, hostElement: HTMLVideoElement, onStateChanged: (status: WebRTCPlayerStatus) => void);

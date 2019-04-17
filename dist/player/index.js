@@ -45,6 +45,8 @@ var WebRTCPlayer = /** @class */ (function () {
         this.onStateChanged = onStateChanged;
         this.userData = { param1: "value1" };
         this.peerConnection = undefined;
+        // Only settable by owner.
+        this.currentStreamName = undefined;
         // do something
         if (!!window) {
             // Normalize all platform dependencies
@@ -61,6 +63,9 @@ var WebRTCPlayer = /** @class */ (function () {
             _this._reportStatus();
         };
     }
+    WebRTCPlayer.currentStream = function (streamName) {
+        return this._currentStreams[streamName];
+    };
     Object.defineProperty(WebRTCPlayer.prototype, "isMuted", {
         get: function () {
             if (!this.hostElement) {
@@ -95,6 +100,7 @@ var WebRTCPlayer = /** @class */ (function () {
      */
     WebRTCPlayer.prototype.connect = function (streamName) {
         return __awaiter(this, void 0, void 0, function () {
+            var _assignStream, existingStream;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -105,6 +111,25 @@ var WebRTCPlayer = /** @class */ (function () {
                         _a.sent();
                         _a.label = 2;
                     case 2:
+                        _assignStream = function (stream, asOwner) {
+                            console.info('[Player] Assigning stream', stream);
+                            if (asOwner) {
+                                _this.currentStreamName = streamName;
+                            }
+                            WebRTCPlayer._currentStreams[streamName] = stream;
+                            try {
+                                _this.hostElement.srcObject = stream;
+                            }
+                            catch (error) {
+                                console.warn('[Player] Unable to assign stream: ', stream, 'to element:', _this.hostElement, 'because', error);
+                                _this.hostElement.src = window.URL.createObjectURL(stream);
+                            }
+                        };
+                        existingStream = WebRTCPlayer.currentStream(streamName);
+                        if (existingStream) {
+                            _assignStream(existingStream, false);
+                            return [2 /*return*/];
+                        }
                         // connect
                         this.connecting = utils_1.cancellable((function (resolve, reject, defineCanceller) {
                             var conf = _this.config;
@@ -115,16 +140,6 @@ var WebRTCPlayer = /** @class */ (function () {
                             };
                             var wsConnection = new WebSocket(conf.WEBRTC_SDP_URL);
                             wsConnection.binaryType = 'arraybuffer';
-                            var _assignStream = function (stream) {
-                                console.info('[Player] Assigning stream', stream);
-                                try {
-                                    _this.hostElement.srcObject = stream;
-                                }
-                                catch (error) {
-                                    console.warn('[Player] Unable to assign stream: ', stream, 'to element:', _this.hostElement, 'because', error);
-                                    _this.hostElement.src = window.URL.createObjectURL(stream);
-                                }
-                            };
                             var _sendGetOffer = function () { return __awaiter(_this, void 0, void 0, function () {
                                 return __generator(this, function (_a) {
                                     wsConnection.send('{"direction":"play", "command":"getOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "userData":' + JSON.stringify(this.userData) + '}');
@@ -145,13 +160,13 @@ var WebRTCPlayer = /** @class */ (function () {
                                     peerConnection.ontrack = function (ev) {
                                         console.log('[Player] gotRemoteTrack: kind: ' + ev.track.kind + ' stream: ' + ev.streams[0]);
                                         // Assign track to remoteVideo
-                                        _assignStream(ev.streams[0]);
+                                        _assignStream(ev.streams[0], true);
                                     };
                                 }
                                 else {
                                     pc.onaddstream = function (event) {
                                         console.log('[Player] gotRemoteStream: ', event.stream);
-                                        _assignStream(event.stream);
+                                        _assignStream(event.stream, true);
                                     };
                                 }
                                 // save to instance.
@@ -259,6 +274,10 @@ var WebRTCPlayer = /** @class */ (function () {
         if (this.hostElement.src) {
             this.hostElement.src = '';
         }
+        // release my own stream
+        if (this.currentStreamName) {
+            delete WebRTCPlayer._currentStreams[this.currentStreamName];
+        }
         // release resources
         this.peerConnection && this.peerConnection.close();
         this.peerConnection = undefined;
@@ -277,6 +296,7 @@ var WebRTCPlayer = /** @class */ (function () {
             error: this.lastError
         });
     };
+    WebRTCPlayer._currentStreams = {};
     return WebRTCPlayer;
 }());
 exports.WebRTCPlayer = WebRTCPlayer;

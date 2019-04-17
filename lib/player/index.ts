@@ -11,11 +11,21 @@ export interface WebRTCPlayerStatus {
 export class WebRTCPlayer {
 
   private userData = {param1:"value1"}
+  
   private peerConnection?: RTCPeerConnection = undefined
 
   private lastError?: Error
 
   private connecting?: CancellablePromise<void>
+
+  // Only settable by owner.
+  private currentStreamName?: string = undefined
+  
+  private static _currentStreams: { [key:string]: MediaStream } = {}
+
+  public static currentStream(streamName: string): MediaStream|undefined {
+    return this._currentStreams[streamName]
+  }
 
   public get isMuted(): boolean|undefined {
     if (!this.hostElement) {
@@ -68,6 +78,27 @@ export class WebRTCPlayer {
     if (this.peerConnection) {
       await this.stop()
     }
+
+    const _assignStream = (stream: MediaStream, asOwner: boolean) => {
+      console.info('[Player] Assigning stream', stream)
+      if (asOwner) {
+        this.currentStreamName = streamName
+      }
+      WebRTCPlayer._currentStreams[streamName] = stream
+      try {
+        this.hostElement.srcObject = stream
+      } catch (error) {
+        console.warn('[Player] Unable to assign stream: ', stream, 'to element:', this.hostElement, 'because', error)
+        this.hostElement.src = window.URL.createObjectURL(stream)
+      }
+    }
+
+    const existingStream = WebRTCPlayer.currentStream(streamName)
+    if (existingStream) {
+      _assignStream(existingStream, false)
+      return
+    }
+
     // connect
     this.connecting = cancellable(((resolve, reject, defineCanceller) => {
       const conf: WebRTCConfiguration = this.config
@@ -78,16 +109,6 @@ export class WebRTCPlayer {
       }
       const wsConnection = new WebSocket(conf.WEBRTC_SDP_URL)
       wsConnection.binaryType = 'arraybuffer'
-
-      const _assignStream = (stream: MediaStream) => {
-        console.info('[Player] Assigning stream', stream)
-        try {
-          this.hostElement.srcObject = stream
-        } catch (error) {
-          console.warn('[Player] Unable to assign stream: ', stream, 'to element:', this.hostElement, 'because', error)
-          this.hostElement.src = window.URL.createObjectURL(stream)
-        }
-      }
 
       const _sendGetOffer = async () => {
         wsConnection.send('{"direction":"play", "command":"getOffer", "streamInfo":'+JSON.stringify(streamInfo)+', "userData":'+JSON.stringify(this.userData)+'}')
@@ -108,12 +129,12 @@ export class WebRTCPlayer {
           peerConnection.ontrack = (ev: RTCTrackEvent) => {
             console.log('[Player] gotRemoteTrack: kind: ' + ev.track.kind + ' stream: ' + ev.streams[0])
             // Assign track to remoteVideo
-            _assignStream(ev.streams[0])
+            _assignStream(ev.streams[0], true)
           }
         } else {
           pc.onaddstream = (event: any) => {
             console.log('[Player] gotRemoteStream: ', event.stream)
-            _assignStream(event.stream)
+            _assignStream(event.stream, true)
           }
         }
 
@@ -219,6 +240,11 @@ export class WebRTCPlayer {
     }
     if (this.hostElement.src) {
       this.hostElement.src = ''
+    }
+
+    // release my own stream
+    if (this.currentStreamName) {
+      delete WebRTCPlayer._currentStreams[this.currentStreamName]
     }
   
     // release resources
