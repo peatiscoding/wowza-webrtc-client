@@ -7,8 +7,8 @@ export class WebRTCPublisher {
 
   private userAgent = navigator.userAgent
   private localStream?: MediaStream                         // if set, preview stream is available.
-  private streamSourceConstraints: MediaStreamConstraints = {
-    video: true,
+  private currentContraints: MediaStreamConstraints = {
+    video: true,                // default = no-facing-mode
     audio: true
   }
   private peerConnection?: RTCPeerConnection = undefined    // if set, we are publishing.
@@ -58,11 +58,15 @@ export class WebRTCPublisher {
     return !!this.videoElement && (!!this.videoElement.src || !!this.videoElement.srcObject)
   }
 
+  public get streamSourceConstraints(): MediaStreamConstraints {
+    return this.currentContraints
+  }
+
   public get lastError(): Error|undefined {
     return this._lastError
   }
 
-  constructor(private config: WebRTCConfiguration, private statusListener?: () => void) {
+  constructor(private config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, private statusListener?: () => void) {
     // Validate if browser support getUserMedia or not?
     if (!supportGetUserMedia()) {
       throw new Error('Your browser does not support getUserMedia API')
@@ -74,8 +78,11 @@ export class WebRTCPublisher {
     window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate
     window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription
     window.URL = window.URL || window.webkitURL
+    
+    // Update constraints.
+    this.currentContraints = mediaStreamConstraints
 
-    console.log('WebRTC Handler started (agent=', this.userAgent, ')')
+    console.log('WebRTC Handler started (agent=', this.userAgent, this.currentContraints, ')')
     queryForCamera(this.streamSourceConstraints)
       .then(hasCamera => this.isCameraMuted = !hasCamera)
       .catch(error => {
@@ -83,31 +90,58 @@ export class WebRTCPublisher {
       })
   }
 
+  public async switchStream(constraints: MediaStreamConstraints) {
+    this.currentContraints = constraints
+    await this._claimMedia(constraints)
+  }
+
   /**
    * Attach user media to configured VideoElement
    */
   public async attachUserMedia(videoElement: HTMLVideoElement) {
+    // save videoElement
+    this.videoElement = videoElement
+
+    // Claim the stream
+    await this._claimMedia(this.streamSourceConstraints)
+  }
+  
+  private async _claimMedia(constraints: MediaStreamConstraints): Promise<MediaStream> {
     // Try getting user media.
-    const stream = await getUserMedia(this.streamSourceConstraints)
+    const stream = await getUserMedia(constraints)
 
     // Camera is not muted. (Camera is available.)
     this.isCameraMuted = false
 
+    // If videoElement exists - attach it.
+    if (this.videoElement) {
+      try {
+        this.videoElement.srcObject = stream
+      } catch(elementError) {
+        console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', this.videoElement, stream)
+        this.videoElement.src = window.URL.createObjectURL(stream)
+      }
+    }
+
+    // If peerConnection exists - replace it.
+    const peerConnection = this.peerConnection
+    if (peerConnection) {
+      // Replace track
+      stream.getTracks().forEach((track) => {
+        const sender = peerConnection.getSenders().find((sender) => {
+          return sender.track && sender.track.kind == track.kind || false
+        })
+        sender && sender.replaceTrack(track)
+      })
+    }
+
     // Select the stream to Local Stream.
     this.localStream = stream
 
-    try {
-      videoElement.srcObject = stream
-    } catch(elementError) {
-      console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', videoElement, stream)
-      videoElement.src = window.URL.createObjectURL(stream)
-    }
-
-    // save videoElement
-    this.videoElement = videoElement
-
     // status updated.
     this.statusListener && this.statusListener()
+
+    return stream
   }
 
   public async detachUserMedia() {

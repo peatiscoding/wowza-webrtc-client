@@ -76,6 +76,7 @@ export class WebRTCPlayer {
   async connect(streamName: string) {
     // Prevent double case
     if (this.peerConnection) {
+      // reconnect instead!
       await this.stop()
     }
 

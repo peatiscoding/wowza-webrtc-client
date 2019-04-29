@@ -4,7 +4,7 @@ export declare class WebRTCPublisher {
     private statusListener?;
     private userAgent;
     private localStream?;
-    private streamSourceConstraints;
+    private currentContraints;
     private peerConnection?;
     private wsConnection?;
     private userData;
@@ -18,12 +18,15 @@ export declare class WebRTCPublisher {
     isCameraMuted: boolean;
     readonly isPublishing: boolean;
     readonly isPreviewEnabled: boolean;
+    readonly streamSourceConstraints: MediaStreamConstraints;
     readonly lastError: Error | undefined;
-    constructor(config: WebRTCConfiguration, statusListener?: (() => void) | undefined);
+    constructor(config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, statusListener?: (() => void) | undefined);
+    switchStream(constraints: MediaStreamConstraints): Promise<void>;
     /**
      * Attach user media to configured VideoElement
      */
     attachUserMedia(videoElement: HTMLVideoElement): Promise<void>;
+    private _claimMedia;
     detachUserMedia(): Promise<void>;
     /**
      * Begin connect to server, and publish the media.

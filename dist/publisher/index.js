@@ -39,12 +39,12 @@ var SDPMessageProcessor_1 = require("./SDPMessageProcessor");
 var lodash_1 = require("lodash");
 var utils_1 = require("../utils");
 var WebRTCPublisher = /** @class */ (function () {
-    function WebRTCPublisher(config, statusListener) {
+    function WebRTCPublisher(config, mediaStreamConstraints, statusListener) {
         var _this = this;
         this.config = config;
         this.statusListener = statusListener;
         this.userAgent = navigator.userAgent;
-        this.streamSourceConstraints = {
+        this.currentContraints = {
             video: true,
             audio: true
         };
@@ -64,7 +64,9 @@ var WebRTCPublisher = /** @class */ (function () {
         window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
         window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
         window.URL = window.URL || window.webkitURL;
-        console.log('WebRTC Handler started (agent=', this.userAgent, ')');
+        // Update constraints.
+        this.currentContraints = mediaStreamConstraints;
+        console.log('WebRTC Handler started (agent=', this.userAgent, this.currentContraints, ')');
         utils_1.queryForCamera(this.streamSourceConstraints)
             .then(function (hasCamera) { return _this.isCameraMuted = !hasCamera; })
             .catch(function (error) {
@@ -120,6 +122,13 @@ var WebRTCPublisher = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(WebRTCPublisher.prototype, "streamSourceConstraints", {
+        get: function () {
+            return this.currentContraints;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(WebRTCPublisher.prototype, "lastError", {
         get: function () {
             return this._lastError;
@@ -127,35 +136,77 @@ var WebRTCPublisher = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
+    WebRTCPublisher.prototype.switchStream = function (constraints) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.currentContraints = constraints;
+                        return [4 /*yield*/, this._claimMedia(constraints)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     /**
      * Attach user media to configured VideoElement
      */
     WebRTCPublisher.prototype.attachUserMedia = function (videoElement) {
         return __awaiter(this, void 0, void 0, function () {
-            var stream;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, utils_1.getUserMedia(this.streamSourceConstraints)
+                    case 0:
+                        // save videoElement
+                        this.videoElement = videoElement;
+                        // Claim the stream
+                        return [4 /*yield*/, this._claimMedia(this.streamSourceConstraints)];
+                    case 1:
+                        // Claim the stream
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    WebRTCPublisher.prototype._claimMedia = function (constraints) {
+        return __awaiter(this, void 0, void 0, function () {
+            var stream, peerConnection;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, utils_1.getUserMedia(constraints)
                         // Camera is not muted. (Camera is available.)
                     ];
                     case 1:
                         stream = _a.sent();
                         // Camera is not muted. (Camera is available.)
                         this.isCameraMuted = false;
+                        // If videoElement exists - attach it.
+                        if (this.videoElement) {
+                            try {
+                                this.videoElement.srcObject = stream;
+                            }
+                            catch (elementError) {
+                                console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', this.videoElement, stream);
+                                this.videoElement.src = window.URL.createObjectURL(stream);
+                            }
+                        }
+                        peerConnection = this.peerConnection;
+                        if (peerConnection) {
+                            // Replace track
+                            stream.getTracks().forEach(function (track) {
+                                var sender = peerConnection.getSenders().find(function (sender) {
+                                    return sender.track && sender.track.kind == track.kind || false;
+                                });
+                                sender && sender.replaceTrack(track);
+                            });
+                        }
                         // Select the stream to Local Stream.
                         this.localStream = stream;
-                        try {
-                            videoElement.srcObject = stream;
-                        }
-                        catch (elementError) {
-                            console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', videoElement, stream);
-                            videoElement.src = window.URL.createObjectURL(stream);
-                        }
-                        // save videoElement
-                        this.videoElement = videoElement;
                         // status updated.
                         this.statusListener && this.statusListener();
-                        return [2 /*return*/];
+                        return [2 /*return*/, stream];
                 }
             });
         });

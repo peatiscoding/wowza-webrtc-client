@@ -106,8 +106,10 @@ var WebRTCPlayer = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         if (!this.peerConnection) return [3 /*break*/, 2];
+                        // reconnect instead!
                         return [4 /*yield*/, this.stop()];
                     case 1:
+                        // reconnect instead!
                         _a.sent();
                         _a.label = 2;
                     case 2:
