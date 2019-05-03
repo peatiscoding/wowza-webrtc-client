@@ -1,3 +1,5 @@
+import { get } from 'lodash'
+
 export const isMobileBrowser = () => {
   // Check my self as agent
   let a = navigator.userAgent || navigator.vendor || (window as any).opera
@@ -49,7 +51,12 @@ export const getUserMedia = async (constraints: MediaStreamConstraints): Promise
   }
   // if there is mediaDevices API.
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    return navigator.mediaDevices.getUserMedia(constraints)
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints)
+    } catch (error) {
+      console.error('Failed to getUserMedia(', error, ')')
+      throw error
+    }
   }
   return new Promise((resolve, reject) => {
     if (navigator.getUserMedia) {

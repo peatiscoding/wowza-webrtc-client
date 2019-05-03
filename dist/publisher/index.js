@@ -142,6 +142,16 @@ var WebRTCPublisher = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         this.currentContraints = constraints;
+                        // Disable current stream before claiming a new one.
+                        if (this.localStream) {
+                            // stop current tracks
+                            if (this.localStream.stop) {
+                                this.localStream.stop();
+                            }
+                            else {
+                                this.localStream.getTracks().forEach(function (o) { return o.stop(); });
+                            }
+                        }
                         return [4 /*yield*/, this._claimMedia(constraints)];
                     case 1:
                         _a.sent();
@@ -355,7 +365,7 @@ var WebRTCPublisher = /** @class */ (function () {
                             case 3:
                                 if (!(_i < _a.length)) return [3 /*break*/, 6];
                                 index = _a[_i];
-                                console.log('i[Publisher] ceCandidates: ' + iceCandidates[index]);
+                                console.log('[Publisher] iceCandidates: ' + iceCandidates[index]);
                                 return [4 /*yield*/, peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]))];
                             case 4:
                                 _c.sent();

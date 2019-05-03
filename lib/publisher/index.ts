@@ -92,6 +92,17 @@ export class WebRTCPublisher {
 
   public async switchStream(constraints: MediaStreamConstraints) {
     this.currentContraints = constraints
+
+    // Disable current stream before claiming a new one.
+    if (this.localStream) {
+      // stop current tracks
+      if (this.localStream.stop) {
+        this.localStream.stop()
+      } else {
+        this.localStream.getTracks().forEach(o => o.stop())
+      }
+    }
+    
     await this._claimMedia(constraints)
   }
 
@@ -272,7 +283,7 @@ export class WebRTCPublisher {
       const iceCandidates = msgJSON['iceCandidates']
       if (iceCandidates !== undefined) {
         for(const index in iceCandidates) {
-          console.log('i[Publisher] ceCandidates: ' + iceCandidates[index]);
+          console.log('[Publisher] iceCandidates: ' + iceCandidates[index]);
           await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]));
         }
       }

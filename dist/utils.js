@@ -70,22 +70,32 @@ exports.supportGetUserMedia = function () {
  * @param constraints
  */
 exports.getUserMedia = function (constraints) { return __awaiter(_this, void 0, void 0, function () {
+    var error_1;
     return __generator(this, function (_a) {
-        if (!navigator) {
-            throw new Error('Your browser does not support getUserMedia API.');
-        }
-        // if there is mediaDevices API.
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            return [2 /*return*/, navigator.mediaDevices.getUserMedia(constraints)];
-        }
-        return [2 /*return*/, new Promise(function (resolve, reject) {
-                if (navigator.getUserMedia) {
-                    navigator.getUserMedia(constraints, resolve, reject);
+        switch (_a.label) {
+            case 0:
+                if (!navigator) {
+                    throw new Error('Your browser does not support getUserMedia API.');
                 }
-                else {
-                    reject(new Error('Your browser does not support getUserMedia API.'));
-                }
-            })];
+                if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return [3 /*break*/, 4];
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, navigator.mediaDevices.getUserMedia(constraints)];
+            case 2: return [2 /*return*/, _a.sent()];
+            case 3:
+                error_1 = _a.sent();
+                console.error('Failed to getUserMedia(', error_1, ')');
+                throw error_1;
+            case 4: return [2 /*return*/, new Promise(function (resolve, reject) {
+                    if (navigator.getUserMedia) {
+                        navigator.getUserMedia(constraints, resolve, reject);
+                    }
+                    else {
+                        reject(new Error('Your browser does not support getUserMedia API.'));
+                    }
+                })];
+        }
     });
 }); };
 /**
