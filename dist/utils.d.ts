@@ -20,3 +20,4 @@ export declare const getUserMedia: (constraints: MediaStreamConstraints) => Prom
  * @param constraints
  */
 export declare const queryForCamera: (constraints: MediaStreamConstraints) => Promise<boolean>;
+export declare const createWebSocket: (wsURL: string) => Promise<WebSocket>;

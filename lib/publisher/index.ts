@@ -1,7 +1,7 @@
 import { WebRTCConfiguration } from '../interface'
 import { SDPMessageProcessor } from './SDPMessageProcessor'
 import { forEach } from 'lodash'
-import { supportGetUserMedia, queryForCamera, getUserMedia } from '../utils'
+import { supportGetUserMedia, queryForCamera, getUserMedia, createWebSocket } from '../utils'
 
 export class WebRTCPublisher {
 
@@ -170,8 +170,19 @@ export class WebRTCPublisher {
 
   /**
    * Begin connect to server, and publish the media.
+   * 
+   * @throws Error upon failure to create connection.
    */
   public async connect(streamName: string) {
+    try {
+      await this._connect(streamName)
+    } catch (error) {
+      // handle error
+      this._reportError(error)
+      throw error
+    }
+  }
+  private async _connect(streamName: string): Promise<void> {
     if (this.peerConnection) {
       throw new Error('There is already active peerConnection!')
     }
@@ -188,7 +199,7 @@ export class WebRTCPublisher {
     const videoFrameRate = conf.WEBRTC_FRAME_RATE
 
     // wsConnect
-    let wsConnection = new WebSocket(wsURL)
+    let wsConnection = await createWebSocket(wsURL)
     wsConnection.binaryType = 'arraybuffer'
 
     wsConnection.onopen = async () => {

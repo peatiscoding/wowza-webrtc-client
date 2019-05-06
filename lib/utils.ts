@@ -1,5 +1,3 @@
-import { get } from 'lodash'
-
 export const isMobileBrowser = () => {
   // Check my self as agent
   let a = navigator.userAgent || navigator.vendor || (window as any).opera
@@ -86,4 +84,8 @@ export const queryForCamera = async (constraints: MediaStreamConstraints): Promi
     return true
   }
   return false
+}
+
+export const createWebSocket = async (wsURL: string): Promise<WebSocket> => {
+  return new WebSocket(wsURL)
 }

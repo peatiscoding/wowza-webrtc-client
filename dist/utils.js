@@ -129,3 +129,8 @@ exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0
         }
     });
 }); };
+exports.createWebSocket = function (wsURL) { return __awaiter(_this, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        return [2 /*return*/, new WebSocket(wsURL)];
+    });
+}); };

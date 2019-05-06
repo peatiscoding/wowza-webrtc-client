@@ -30,8 +30,11 @@ export declare class WebRTCPublisher {
     detachUserMedia(): Promise<void>;
     /**
      * Begin connect to server, and publish the media.
+     *
+     * @throws Error upon failure to create connection.
      */
     connect(streamName: string): Promise<void>;
+    private _connect;
     private _reportError;
     disconnect(): Promise<void>;
     private _stopStream;
