@@ -103,7 +103,38 @@ var SDPMessageProcessor = /** @class */ (function () {
             sdpStrRet += '\r\n';
         }
         console.log("Resulting SDP: " + sdpStrRet);
+        if (this.videoMode === '42e01f') {
+            return this.forceH264(sdpStrRet);
+        }
         return sdpStrRet;
+    };
+    /**
+     * Fix Huawei OS failed to handle H264 configuration correctly..
+     *
+     * @param sdp
+     */
+    SDPMessageProcessor.prototype.forceH264 = function (sdp) {
+        var h264regex = /^a=rtpmap:(\d+) H264\/(?:\d+)/mg;
+        var h264match = h264regex.exec(sdp);
+        var h264ids = [];
+        while (null != h264match) {
+            h264ids.push(h264match[1]);
+            h264match = h264regex.exec(sdp);
+        }
+        var myregexp = /(m=video 9 UDP\/TLS\/RTP\/SAVPF )(\d+(?: \d+)+)/;
+        sdp = sdp.replace(myregexp, function (match, p1, p2) {
+            var j, others = p2.split(" ");
+            var _loop_1 = function (i) {
+                others = others.filter(function (e) {
+                    return e !== h264ids[i];
+                });
+            };
+            for (var i = 0; i < h264ids.length; i++) {
+                _loop_1(i);
+            }
+            return p1 + h264ids.join(" ") + " " + others.join(" ");
+        });
+        return sdp.replace('42001f', '42e01f');
     };
     SDPMessageProcessor.prototype.deliverCheckLine = function (profile, type) {
         var outputString = '';
