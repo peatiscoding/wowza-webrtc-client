@@ -1,6 +1,6 @@
 {
   "name": "wowza-webrtc-client",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "WoWza WebRTC Player/Client.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
