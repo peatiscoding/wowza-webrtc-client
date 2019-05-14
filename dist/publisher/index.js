@@ -39,9 +39,10 @@ var SDPMessageProcessor_1 = require("./SDPMessageProcessor");
 var lodash_1 = require("lodash");
 var utils_1 = require("../utils");
 var WebRTCPublisher = /** @class */ (function () {
-    function WebRTCPublisher(config, mediaStreamConstraints, statusListener) {
+    function WebRTCPublisher(config, mediaStreamConstraints, enhanceMode, statusListener) {
         var _this = this;
         this.config = config;
+        this.enhanceMode = enhanceMode;
         this.statusListener = statusListener;
         this.userAgent = navigator.userAgent;
         this.currentContraints = {
@@ -136,11 +137,19 @@ var WebRTCPublisher = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
-    WebRTCPublisher.prototype.switchStream = function (constraints) {
+    WebRTCPublisher.prototype.switchStream = function (constraints, force) {
+        if (force === void 0) { force = false; }
         return __awaiter(this, void 0, void 0, function () {
+            var current, target;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        current = JSON.stringify(this.currentContraints);
+                        target = JSON.stringify(constraints);
+                        if (!force && current === target) {
+                            console.log('[Publisher] Constraints already matched. ignore switchStream request.');
+                            return [2 /*return*/];
+                        }
                         this.currentContraints = constraints;
                         // Disable current stream before claiming a new one.
                         if (this.localStream) {
@@ -289,7 +298,7 @@ var WebRTCPublisher = /** @class */ (function () {
                         wsConnection = _a.sent();
                         wsConnection.binaryType = 'arraybuffer';
                         wsConnection.onopen = function () { return __awaiter(_this, void 0, void 0, function () {
-                            var localStream, err, peerConnection, pc, localTracks, localTrack, description, enhancer, error_2;
+                            var localStream, err, peerConnection, pc, localTracks, localTrack, description, originalSdp, enhancer, error_2;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
@@ -321,19 +330,27 @@ var WebRTCPublisher = /** @class */ (function () {
                                         _a.label = 1;
                                     case 1:
                                         _a.trys.push([1, 4, , 5]);
-                                        return [4 /*yield*/, peerConnection.createOffer()
-                                            // enhance sdp message
-                                        ];
+                                        return [4 /*yield*/, peerConnection.createOffer()];
                                     case 2:
                                         description = _a.sent();
-                                        enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
-                                        'opus' // AudioMode: 'OPUS'
-                                        );
-                                        description.sdp = enhancer.enhance(description.sdp, {
-                                            audioBitrate: audioBitrate,
-                                            videoBitrate: videoBitrate,
-                                            videoFrameRate: videoFrameRate
-                                        });
+                                        if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
+                                            originalSdp = description.sdp;
+                                            enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+                                            'opus' // AudioMode: 'OPUS'
+                                            );
+                                            description.sdp = enhancer.enhance(description.sdp, {
+                                                audioBitrate: audioBitrate,
+                                                videoBitrate: videoBitrate,
+                                                videoFrameRate: videoFrameRate
+                                            });
+                                            if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
+                                                console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.');
+                                                description.sdp = originalSdp;
+                                            }
+                                            else {
+                                                console.log('[Publisher] Auto Enhance SDPMessage is valid.');
+                                            }
+                                        }
                                         return [4 /*yield*/, peerConnection.setLocalDescription(description)
                                             // send offer back with enhanced SDP
                                         ];

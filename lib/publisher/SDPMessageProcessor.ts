@@ -109,7 +109,6 @@ export class SDPMessageProcessor {
       }
       sdpStrRet += '\r\n'
     }
-    console.log(`Resulting SDP: ${sdpStrRet}`)
     if (this.videoMode === '42e01f') {
       return this.forceH264(sdpStrRet)
     }
@@ -122,24 +121,17 @@ export class SDPMessageProcessor {
    * @param sdp 
    */
   private forceH264(sdp: string): string {
-      let h264regex = /^a=rtpmap:(\d+) H264\/(?:\d+)/mg
-      let h264match = h264regex.exec(sdp)
-      let h264ids: string[] = []
-      while (null != h264match) {
-          h264ids.push(h264match[1]);
-          h264match = h264regex.exec(sdp)
-      }
-      let myregexp = /(m=video 9 UDP\/TLS\/RTP\/SAVPF )(\d+(?: \d+)+)/;
-      sdp = sdp.replace(myregexp, function(match, p1, p2) {
-          let j, others = p2.split(" ")
-          for (let i = 0; i < h264ids.length; i++) {
-              others = others.filter(function(e) {
-                  return e !== h264ids[i]
-              })
-          }
-          return p1 + h264ids.join(" ") + " " + others.join(" ")
-      })
-      return sdp.replace('42001f', '42e01f')
+    console.log(`Forcing SDP: ${sdp}`)
+    return sdp.replace('42001f', '42e01f')
+        // .replace(/([\r\n]{2})[^=]+([a-z]=)/g, '$1$2')
+  }
+
+  /**
+   * Detect corrupted SDP message.
+   * @param sdpMessage 
+   */
+  public static isCorrupted(sdpMessage: string): boolean {
+    return /([\r\n]{2})[^=]+([a-z]=)/.test(sdpMessage)
   }
 
   private deliverCheckLine(profile: string, type: 'video'|'audio'): string {

@@ -66,7 +66,7 @@ export class WebRTCPublisher {
     return this._lastError
   }
 
-  constructor(private config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, private statusListener?: () => void) {
+  constructor(private config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, public enhanceMode: 'auto'|boolean, private statusListener?: () => void) {
     // Validate if browser support getUserMedia or not?
     if (!supportGetUserMedia()) {
       throw new Error('Your browser does not support getUserMedia API')
@@ -90,7 +90,13 @@ export class WebRTCPublisher {
       })
   }
 
-  public async switchStream(constraints: MediaStreamConstraints) {
+  public async switchStream(constraints: MediaStreamConstraints, force: boolean = false) {
+    const current = JSON.stringify(this.currentContraints)
+    const target = JSON.stringify(constraints)
+    if (!force && current === target) {
+      console.log('[Publisher] Constraints already matched. ignore switchStream request.')
+      return
+    }
     this.currentContraints = constraints
 
     // Disable current stream before claiming a new one.
@@ -236,16 +242,27 @@ export class WebRTCPublisher {
       try {
         const description = await peerConnection.createOffer()
 
-        // enhance sdp message
-        const enhancer = new SDPMessageProcessor(
-          '42e01f',    // VideoMode: 'H264=42e01f' or 'VP9=VP9'
-          'opus'    // AudioMode: 'OPUS'
-        )
-        description.sdp = enhancer.enhance(description.sdp, {
-          audioBitrate,
-          videoBitrate,
-          videoFrameRate
-        })
+        if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
+          const originalSdp = description.sdp
+
+          // enhance sdp message
+          const enhancer = new SDPMessageProcessor(
+            '42e01f',    // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+            'opus'    // AudioMode: 'OPUS'
+          )
+          description.sdp = enhancer.enhance(description.sdp, {
+            audioBitrate,
+            videoBitrate,
+            videoFrameRate
+          })
+  
+          if (this.enhanceMode === 'auto' && SDPMessageProcessor.isCorrupted(description.sdp)) {
+            console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.')
+            description.sdp = originalSdp
+          } else {
+            console.log('[Publisher] Auto Enhance SDPMessage is valid.')
+          }
+        }
 
         await peerConnection.setLocalDescription(description)
 

@@ -12,6 +12,11 @@ export declare class SDPMessageProcessor {
      * @param sdp
      */
     private forceH264;
+    /**
+     * Detect corrupted SDP message.
+     * @param sdpMessage
+     */
+    static isCorrupted(sdpMessage: string): boolean;
     private deliverCheckLine;
     private checkLine;
     private getrtpMapID;

@@ -1,6 +1,7 @@
 import { WebRTCConfiguration } from '../interface';
 export declare class WebRTCPublisher {
     private config;
+    enhanceMode: 'auto' | boolean;
     private statusListener?;
     private userAgent;
     private localStream?;
@@ -20,8 +21,8 @@ export declare class WebRTCPublisher {
     readonly isPreviewEnabled: boolean;
     readonly streamSourceConstraints: MediaStreamConstraints;
     readonly lastError: Error | undefined;
-    constructor(config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, statusListener?: (() => void) | undefined);
-    switchStream(constraints: MediaStreamConstraints): Promise<void>;
+    constructor(config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, enhanceMode: 'auto' | boolean, statusListener?: (() => void) | undefined);
+    switchStream(constraints: MediaStreamConstraints, force?: boolean): Promise<void>;
     /**
      * Attach user media to configured VideoElement
      */
