@@ -266,6 +266,7 @@ var WebRTCPublisher = /** @class */ (function () {
                         return [4 /*yield*/, this._connect(streamName)];
                     case 1:
                         _a.sent();
+                        console.log('Publishing stream', streamName);
                         return [3 /*break*/, 3];
                     case 2:
                         error_1 = _a.sent();
