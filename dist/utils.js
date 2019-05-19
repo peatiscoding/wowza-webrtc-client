@@ -129,8 +129,64 @@ exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0
         }
     });
 }); };
-exports.createWebSocket = function (wsURL) { return __awaiter(_this, void 0, void 0, function () {
-    return __generator(this, function (_a) {
-        return [2 /*return*/, new WebSocket(wsURL)];
+/**
+ * Resolve reason as readable string.
+ *
+ * @see https://tools.ietf.org/html/rfc6455#section-7.4.1
+ * @param event CloseEvent
+ */
+var closeReason = function (event) {
+    if (event.code == 1000)
+        return "Normal closure, meaning that the purpose for which the connection was established has been fulfilled.";
+    else if (event.code == 1001)
+        return "An endpoint is \"going away\", such as a server going down or a browser having navigated away from a page.";
+    else if (event.code == 1002)
+        return "An endpoint is terminating the connection due to a protocol error";
+    else if (event.code == 1003)
+        return "An endpoint is terminating the connection because it has received a type of data it cannot accept (e.g., an endpoint that understands only text data MAY send this if it receives a binary message).";
+    else if (event.code == 1004)
+        return "Reserved. The specific meaning might be defined in the future.";
+    else if (event.code == 1005)
+        return "No status code was actually present.";
+    else if (event.code == 1006)
+        return "The connection was closed abnormally, e.g., without sending or receiving a Close control frame";
+    else if (event.code == 1007)
+        return "An endpoint is terminating the connection because it has received data within a message that was not consistent with the type of the message (e.g., non-UTF-8 [http://tools.ietf.org/html/rfc3629] data within a text message).";
+    else if (event.code == 1008)
+        return "An endpoint is terminating the connection because it has received a message that \"violates its policy\". This reason is given either if there is no other sutible reason, or if there is a need to hide specific details about the policy.";
+    else if (event.code == 1009)
+        return "An endpoint is terminating the connection because it has received a message that is too big for it to process.";
+    else if (event.code == 1010) // Note that this status code is not used by the server, because it can fail the WebSocket handshake instead.
+        return "An endpoint (client) is terminating the connection because it has expected the server to negotiate one or more extension, but the server didn't return them in the response message of the WebSocket handshake. <br /> Specifically, the extensions that are needed are: " + event.reason;
+    else if (event.code == 1011)
+        return "A server is terminating the connection because it encountered an unexpected condition that prevented it from fulfilling the request.";
+    else if (event.code == 1015)
+        return "The connection was closed due to a failure to perform a TLS handshake (e.g., the server certificate can't be verified).";
+    return "Unknown reason";
+};
+/**
+ * Return a well established WebSocket connection.
+ *
+ * Resolved only when onopen is emitted.
+ * Reject when onclose is emitted.
+ *
+ * @param wsURL
+ * @return WebSocket instance.
+ */
+exports.createWebSocket = function (wsURL) {
+    return new Promise(function (resolve, reject) {
+        var o = new WebSocket(wsURL);
+        o.onopen = function () {
+            o.onopen = null;
+            o.onclose = null;
+            console.log('createWebSocket -> open!');
+            resolve(o);
+        };
+        o.onclose = function (closeEvent) {
+            o.onopen = null;
+            o.onclose = null;
+            console.log('createWebSocket -> close!');
+            reject(new Error(closeReason(closeEvent)));
+        };
     });
-}); };
+};

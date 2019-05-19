@@ -38,6 +38,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var SDPMessageProcessor_1 = require("./SDPMessageProcessor");
 var lodash_1 = require("lodash");
 var utils_1 = require("../utils");
+var logger_1 = require("../logger");
 var WebRTCPublisher = /** @class */ (function () {
     function WebRTCPublisher(config, mediaStreamConstraints, enhanceMode, statusListener) {
         var _this = this;
@@ -259,6 +260,9 @@ var WebRTCPublisher = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
+                        console.log('Trying to connect with ', streamName);
+                        this._lastError = undefined;
+                        this.statusListener && this.statusListener();
                         return [4 /*yield*/, this._connect(streamName)];
                     case 1:
                         _a.sent();
@@ -275,13 +279,13 @@ var WebRTCPublisher = /** @class */ (function () {
     };
     WebRTCPublisher.prototype._connect = function (streamName) {
         return __awaiter(this, void 0, void 0, function () {
-            var conf, wsURL, streamInfo, videoBitrate, audioBitrate, videoFrameRate, wsConnection;
+            var conf, wsURL, streamInfo, videoBitrate, audioBitrate, videoFrameRate, wsConnection, negotiationClosure, localStream, peerConnection, pc, localTracks, localTrack, description, originalSdp, enhancer, error_2;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.peerConnection) {
-                            throw new Error('There is already active peerConnection!');
+                            throw new Error('There is already an active peerConnection!');
                         }
                         conf = this.config;
                         wsURL = conf.WEBRTC_SDP_URL;
@@ -297,143 +301,141 @@ var WebRTCPublisher = /** @class */ (function () {
                     case 1:
                         wsConnection = _a.sent();
                         wsConnection.binaryType = 'arraybuffer';
-                        wsConnection.onopen = function () { return __awaiter(_this, void 0, void 0, function () {
-                            var localStream, err, peerConnection, pc, localTracks, localTrack, description, originalSdp, enhancer, error_2;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        console.log('[Publisher] wsConnection.onopen');
-                                        localStream = this.localStream;
-                                        if (!localStream) {
-                                            err = new Error('Invalid state, open connection without video stream to publish.');
-                                            this._reportError(err);
-                                            throw err;
-                                        }
-                                        peerConnection = new RTCPeerConnection({ iceServers: [] });
-                                        peerConnection.onicecandidate = function (event) {
-                                            if (event.candidate != null) {
-                                                console.log("[Publisher] gotIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
-                                            }
-                                        };
-                                        pc = peerConnection;
-                                        if (!pc.addStream) {
-                                            {
-                                                localTracks = localStream.getTracks();
-                                                for (localTrack in localTracks) {
-                                                    peerConnection.addTrack(localTracks[localTrack], localStream);
-                                                }
-                                            }
-                                        }
-                                        else {
-                                            pc.addStream(localStream);
-                                        }
-                                        _a.label = 1;
-                                    case 1:
-                                        _a.trys.push([1, 4, , 5]);
-                                        return [4 /*yield*/, peerConnection.createOffer()];
-                                    case 2:
-                                        description = _a.sent();
-                                        if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
-                                            originalSdp = description.sdp;
-                                            enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
-                                            'opus' // AudioMode: 'OPUS'
-                                            );
-                                            description.sdp = enhancer.enhance(description.sdp, {
-                                                audioBitrate: audioBitrate,
-                                                videoBitrate: videoBitrate,
-                                                videoFrameRate: videoFrameRate
-                                            });
-                                            if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
-                                                console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.');
-                                                description.sdp = originalSdp;
-                                            }
-                                            else {
-                                                console.log('[Publisher] Auto Enhance SDPMessage is valid.');
-                                            }
-                                        }
-                                        return [4 /*yield*/, peerConnection.setLocalDescription(description)
-                                            // send offer back with enhanced SDP
-                                        ];
-                                    case 3:
-                                        _a.sent();
-                                        // send offer back with enhanced SDP
-                                        wsConnection.send('{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}');
-                                        this.peerConnection = peerConnection;
-                                        this.statusListener && this.statusListener();
-                                        console.log('[Publisher] Publishing with streamName=', streamName);
-                                        return [3 /*break*/, 5];
-                                    case 4:
-                                        error_2 = _a.sent();
-                                        console.error('Failed while waiting for offer result', error_2);
-                                        this._reportError(error_2);
-                                        return [3 /*break*/, 5];
-                                    case 5: return [2 /*return*/];
-                                }
-                            });
-                        }); };
-                        wsConnection.onmessage = function (evt) { return __awaiter(_this, void 0, void 0, function () {
-                            var err, peerConnection, msgJSON, msgStatus, msgCommand, err, sdpData, iceCandidates, _a, _b, _i, index;
-                            return __generator(this, function (_c) {
-                                switch (_c.label) {
-                                    case 0:
-                                        if (!this.peerConnection) {
-                                            err = new Error('Invalid state! peerConnection is empty!');
-                                            this._reportError(err);
-                                            throw err;
-                                        }
-                                        peerConnection = this.peerConnection;
-                                        msgJSON = JSON.parse(evt.data);
-                                        msgStatus = Number(msgJSON['status']);
-                                        msgCommand = msgJSON['command'];
-                                        console.log('Incoming message', msgCommand);
-                                        if (msgStatus != 200) {
-                                            err = new Error("Failed to publish, cannot handle invalid status: " + msgStatus);
-                                            this._reportError(err);
-                                            return [2 /*return*/];
-                                        }
-                                        sdpData = msgJSON['sdp'];
-                                        if (!(sdpData !== undefined)) return [3 /*break*/, 2];
-                                        console.log("[Publisher] sdp: " + sdpData);
-                                        return [4 /*yield*/, peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))];
-                                    case 1:
-                                        _c.sent();
-                                        _c.label = 2;
-                                    case 2:
-                                        iceCandidates = msgJSON['iceCandidates'];
-                                        if (!(iceCandidates !== undefined)) return [3 /*break*/, 6];
-                                        _a = [];
-                                        for (_b in iceCandidates)
-                                            _a.push(_b);
-                                        _i = 0;
-                                        _c.label = 3;
-                                    case 3:
-                                        if (!(_i < _a.length)) return [3 /*break*/, 6];
-                                        index = _a[_i];
-                                        console.log('[Publisher] iceCandidates: ' + iceCandidates[index]);
-                                        return [4 /*yield*/, peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]))];
-                                    case 4:
-                                        _c.sent();
-                                        _c.label = 5;
-                                    case 5:
-                                        _i++;
-                                        return [3 /*break*/, 3];
-                                    case 6:
-                                        // Connected! SDP Connection is no longer required.
-                                        if (wsConnection != null) {
-                                            wsConnection.close();
-                                        }
-                                        return [2 /*return*/];
-                                }
-                            });
-                        }); };
                         wsConnection.onclose = function () { return console.log('[Publisher] wsConnection.onclose'); };
                         wsConnection.onerror = function (evt) {
                             console.log("[Publisher] wsConnection.onerror: " + JSON.stringify(evt));
                             _this._reportError(new Error(JSON.stringify(evt)));
                         };
+                        negotiationClosure = new Promise(function (resolve, reject) {
+                            wsConnection.onmessage = function (evt) {
+                                // Parse incoming message.
+                                var msgJSON = JSON.parse(evt.data);
+                                var msgStatus = Number(msgJSON['status']);
+                                var msgCommand = msgJSON['command'];
+                                console.log('[Publisher] Incoming message', msgCommand);
+                                logger_1.Logger.wrap('[Publisher] wsConnection.onMessage', function (console) { return __awaiter(_this, void 0, void 0, function () {
+                                    var peerConnection, sdpData, iceCandidates, _a, _b, _i, index;
+                                    return __generator(this, function (_c) {
+                                        switch (_c.label) {
+                                            case 0:
+                                                if (!this.peerConnection) {
+                                                    throw new Error('Invalid state! peerConnection is empty!');
+                                                }
+                                                peerConnection = this.peerConnection;
+                                                if (msgStatus != 200) {
+                                                    // Error
+                                                    throw new Error("Failed to publish, cannot handle invalid status: " + msgStatus);
+                                                }
+                                                sdpData = msgJSON['sdp'];
+                                                if (!(sdpData !== undefined)) return [3 /*break*/, 2];
+                                                console.log("_ sdp: " + sdpData);
+                                                return [4 /*yield*/, peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))];
+                                            case 1:
+                                                _c.sent();
+                                                _c.label = 2;
+                                            case 2:
+                                                iceCandidates = msgJSON['iceCandidates'];
+                                                if (!(iceCandidates !== undefined)) return [3 /*break*/, 6];
+                                                _a = [];
+                                                for (_b in iceCandidates)
+                                                    _a.push(_b);
+                                                _i = 0;
+                                                _c.label = 3;
+                                            case 3:
+                                                if (!(_i < _a.length)) return [3 /*break*/, 6];
+                                                index = _a[_i];
+                                                console.log('_ iceCandidates: ' + iceCandidates[index]);
+                                                return [4 /*yield*/, peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]))];
+                                            case 4:
+                                                _c.sent();
+                                                _c.label = 5;
+                                            case 5:
+                                                _i++;
+                                                return [3 /*break*/, 3];
+                                            case 6:
+                                                // Connected! SDP Connection is no longer required.
+                                                if (wsConnection != null) {
+                                                    wsConnection.close();
+                                                    this.statusListener && this.statusListener();
+                                                    resolve();
+                                                }
+                                                return [2 /*return*/];
+                                        }
+                                    });
+                                }); }).catch(reject);
+                            };
+                        });
                         // save it.
                         this.wsConnection = wsConnection;
-                        return [2 /*return*/];
+                        console.log('[Publisher] wsConnection ready!');
+                        _a.label = 2;
+                    case 2:
+                        _a.trys.push([2, 7, , 8]);
+                        localStream = this.localStream;
+                        if (!localStream) {
+                            throw new Error('Invalid state, cannot open connection without video stream to publish.');
+                        }
+                        peerConnection = new RTCPeerConnection({ iceServers: [] });
+                        peerConnection.onicecandidate = function (event) {
+                            if (event.candidate != null) {
+                                console.log("[Publisher] [PC] gotIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
+                            }
+                        };
+                        pc = peerConnection;
+                        if (!pc.addStream) {
+                            {
+                                localTracks = localStream.getTracks();
+                                for (localTrack in localTracks) {
+                                    peerConnection.addTrack(localTracks[localTrack], localStream);
+                                }
+                            }
+                        }
+                        else {
+                            pc.addStream(localStream);
+                        }
+                        return [4 /*yield*/, peerConnection.createOffer()];
+                    case 3:
+                        description = _a.sent();
+                        if (!(this.enhanceMode === 'auto' || this.enhanceMode === true)) return [3 /*break*/, 5];
+                        originalSdp = description.sdp;
+                        enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+                        'opus' // AudioMode: 'OPUS'
+                        );
+                        description.sdp = enhancer.enhance(description.sdp, {
+                            audioBitrate: audioBitrate,
+                            videoBitrate: videoBitrate,
+                            videoFrameRate: videoFrameRate
+                        });
+                        if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
+                            console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.');
+                            description.sdp = originalSdp;
+                        }
+                        else {
+                            console.log('[Publisher] Auto Enhance SDPMessage is valid.');
+                        }
+                        return [4 /*yield*/, peerConnection.setLocalDescription(description)
+                            // send offer back with enhanced SDP
+                        ];
+                    case 4:
+                        _a.sent();
+                        // send offer back with enhanced SDP
+                        wsConnection.send('{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}');
+                        this.peerConnection = peerConnection;
+                        this.statusListener && this.statusListener();
+                        console.log('[Publisher] Publishing with streamName=', streamName);
+                        _a.label = 5;
+                    case 5: 
+                    // Waiting for Message result.
+                    return [4 /*yield*/, negotiationClosure];
+                    case 6:
+                        // Waiting for Message result.
+                        _a.sent();
+                        return [3 /*break*/, 8];
+                    case 7:
+                        error_2 = _a.sent();
+                        console.error('[Publisher] Publishing stream failed', error_2);
+                        throw error_2;
+                    case 8: return [2 /*return*/];
                 }
             });
         });

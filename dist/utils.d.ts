@@ -20,4 +20,13 @@ export declare const getUserMedia: (constraints: MediaStreamConstraints) => Prom
  * @param constraints
  */
 export declare const queryForCamera: (constraints: MediaStreamConstraints) => Promise<boolean>;
+/**
+ * Return a well established WebSocket connection.
+ *
+ * Resolved only when onopen is emitted.
+ * Reject when onclose is emitted.
+ *
+ * @param wsURL
+ * @return WebSocket instance.
+ */
 export declare const createWebSocket: (wsURL: string) => Promise<WebSocket>;

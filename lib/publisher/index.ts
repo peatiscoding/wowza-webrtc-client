@@ -2,6 +2,7 @@ import { WebRTCConfiguration } from '../interface'
 import { SDPMessageProcessor } from './SDPMessageProcessor'
 import { forEach } from 'lodash'
 import { supportGetUserMedia, queryForCamera, getUserMedia, createWebSocket } from '../utils'
+import { Logger } from '../logger';
 
 export class WebRTCPublisher {
 
@@ -181,16 +182,21 @@ export class WebRTCPublisher {
    */
   public async connect(streamName: string) {
     try {
+      console.log('Trying to connect with ', streamName)
+      this._lastError = undefined
+      this.statusListener && this.statusListener()
       await this._connect(streamName)
+      console.log('Publishing stream', streamName)
     } catch (error) {
       // handle error
       this._reportError(error)
       throw error
     }
   }
+
   private async _connect(streamName: string): Promise<void> {
     if (this.peerConnection) {
-      throw new Error('There is already active peerConnection!')
+      throw new Error('There is already an active peerConnection!')
     }
     // grab configs
     const conf: WebRTCConfiguration = this.config
@@ -208,23 +214,78 @@ export class WebRTCPublisher {
     let wsConnection = await createWebSocket(wsURL)
     wsConnection.binaryType = 'arraybuffer'
 
-    wsConnection.onopen = async () => {
-      console.log('[Publisher] wsConnection.onopen')
+    wsConnection.onclose = () => console.log('[Publisher] wsConnection.onclose')
 
+    wsConnection.onerror = (evt) => {
+      console.log("[Publisher] wsConnection.onerror: "+JSON.stringify(evt));
+      this._reportError(new Error(JSON.stringify(evt)))
+    }
+
+    /**
+     * await this when peer connection are well established.
+     */
+    const negotiationClosure = new Promise<void>((resolve, reject) => {
+      wsConnection.onmessage = (evt: any) => {
+        // Parse incoming message.
+        const msgJSON = JSON.parse(evt.data)
+        const msgStatus = Number(msgJSON['status'])
+        const msgCommand = msgJSON['command']
+
+        console.log('[Publisher] Incoming message', msgCommand)
+
+        Logger.wrap('[Publisher] wsConnection.onMessage', async (console) => {
+
+          if (!this.peerConnection) {
+            throw new Error('Invalid state! peerConnection is empty!')
+          }
+          const peerConnection = this.peerConnection
+
+          if (msgStatus != 200) {
+            // Error
+            throw new Error(`Failed to publish, cannot handle invalid status: ${msgStatus}`)
+          }
+
+          const sdpData = msgJSON['sdp']
+          if (sdpData !== undefined) {
+            console.log(`_ sdp: ${sdpData}`)
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))
+          }
+
+          const iceCandidates = msgJSON['iceCandidates']
+          if (iceCandidates !== undefined) {
+            for(const index in iceCandidates) {
+              console.log('_ iceCandidates: ' + iceCandidates[index]);
+              await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]));
+            }
+          }
+
+          // Connected! SDP Connection is no longer required.
+          if (wsConnection != null) {
+            wsConnection.close()
+            this.statusListener && this.statusListener()
+            resolve()
+          }
+        }).catch(reject)
+      }
+    })
+
+    // save it.
+    this.wsConnection = wsConnection
+
+    console.log('[Publisher] wsConnection ready!')
+    try {
       const localStream = this.localStream
       if (!localStream) {
-        const err = new Error('Invalid state, open connection without video stream to publish.')
-        this._reportError(err)
-        throw err
+        throw new Error('Invalid state, cannot open connection without video stream to publish.')
       }
-
+      
       const peerConnection = new RTCPeerConnection({ iceServers: [] })
       peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
         if (event.candidate != null) {
-          console.log(`[Publisher] gotIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
+          console.log(`[Publisher] [PC] gotIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
         }
       }
-  
+      
       // Swizzle between Webkit API versions Support here ...
       const pc: any = peerConnection
       if (!pc.addStream) {
@@ -237,100 +298,48 @@ export class WebRTCPublisher {
       } else {
         pc.addStream(localStream)
       }
-
+      
       // Create offer
-      try {
-        const description = await peerConnection.createOffer()
-
-        if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
-          const originalSdp = description.sdp
-
-          // enhance sdp message
-          const enhancer = new SDPMessageProcessor(
-            '42e01f',    // VideoMode: 'H264=42e01f' or 'VP9=VP9'
-            'opus'    // AudioMode: 'OPUS'
-          )
-          description.sdp = enhancer.enhance(description.sdp, {
-            audioBitrate,
-            videoBitrate,
-            videoFrameRate
-          })
-  
-          if (this.enhanceMode === 'auto' && SDPMessageProcessor.isCorrupted(description.sdp)) {
-            console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.')
-            description.sdp = originalSdp
-          } else {
-            console.log('[Publisher] Auto Enhance SDPMessage is valid.')
-          }
+      const description = await peerConnection.createOffer()
+      
+      if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
+        const originalSdp = description.sdp
+        
+        // enhance sdp message
+        const enhancer = new SDPMessageProcessor(
+          '42e01f',    // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+          'opus'    // AudioMode: 'OPUS'
+        )
+        description.sdp = enhancer.enhance(description.sdp, {
+          audioBitrate,
+          videoBitrate,
+          videoFrameRate
+        })
+        
+        if (this.enhanceMode === 'auto' && SDPMessageProcessor.isCorrupted(description.sdp)) {
+          console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.')
+          description.sdp = originalSdp
+        } else {
+          console.log('[Publisher] Auto Enhance SDPMessage is valid.')
         }
-
+        
         await peerConnection.setLocalDescription(description)
-
+        
         // send offer back with enhanced SDP
         wsConnection.send('{"direction":"publish", "command":"sendOffer", "streamInfo":'+JSON.stringify(streamInfo)+', "sdp":'+JSON.stringify(description)+', "userData":'+JSON.stringify(this.userData)+'}');
-
+        
         this.peerConnection = peerConnection
         this.statusListener && this.statusListener()
-
+        
         console.log('[Publisher] Publishing with streamName=', streamName)
-
-      } catch (error) {
-        console.error('Failed while waiting for offer result', error)
-        this._reportError(error)
       }
+
+      // Waiting for Message result.
+      await negotiationClosure
+    } catch(error) {
+      console.error('[Publisher] Publishing stream failed', error)
+      throw error
     }
-
-    wsConnection.onmessage = async (evt: any) => {
-      if (!this.peerConnection) {
-        const err = new Error('Invalid state! peerConnection is empty!')
-        this._reportError(err)
-        throw err
-      }
-
-      const peerConnection = this.peerConnection
-      const msgJSON = JSON.parse(evt.data)
-      const msgStatus = Number(msgJSON['status'])
-      const msgCommand = msgJSON['command']
-
-      console.log('Incoming message', msgCommand)
-
-      if (msgStatus != 200) {
-        // Error
-        const err = new Error(`Failed to publish, cannot handle invalid status: ${msgStatus}`)
-        this._reportError(err)
-        return
-      }
-
-      const sdpData = msgJSON['sdp']
-      if (sdpData !== undefined) {
-        console.log(`[Publisher] sdp: ${sdpData}`)
-
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))
-      }
-
-      const iceCandidates = msgJSON['iceCandidates']
-      if (iceCandidates !== undefined) {
-        for(const index in iceCandidates) {
-          console.log('[Publisher] iceCandidates: ' + iceCandidates[index]);
-          await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]));
-        }
-      }
-
-      // Connected! SDP Connection is no longer required.
-      if (wsConnection != null) {
-        wsConnection.close()
-      }
-    }
-
-    wsConnection.onclose = () => console.log('[Publisher] wsConnection.onclose')
-
-    wsConnection.onerror = (evt) => {
-      console.log("[Publisher] wsConnection.onerror: "+JSON.stringify(evt));
-      this._reportError(new Error(JSON.stringify(evt)))
-    }
-
-    // save it.
-    this.wsConnection = wsConnection
   }
 
   private _reportError(error: Error) {
