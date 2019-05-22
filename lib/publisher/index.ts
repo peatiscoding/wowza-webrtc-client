@@ -224,7 +224,8 @@ export class WebRTCPublisher {
     /**
      * await this when peer connection are well established.
      */
-    const negotiationClosure = new Promise<void>((resolve, reject) => {
+    const negotiationClosure = (offerMessage: string) => new Promise<void>((resolve, reject) => {
+      console.log('[Publisher] enter nego closure!')
       wsConnection.onmessage = (evt: any) => {
         // Parse incoming message.
         const msgJSON = JSON.parse(evt.data)
@@ -267,6 +268,8 @@ export class WebRTCPublisher {
           }
         }).catch(reject)
       }
+
+      wsConnection.send(offerMessage)
     })
 
     // save it.
@@ -301,6 +304,7 @@ export class WebRTCPublisher {
       
       // Create offer
       const description = await peerConnection.createOffer()
+      console.log('[Publisher] offer created!')
       
       if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
         const originalSdp = description.sdp
@@ -322,20 +326,22 @@ export class WebRTCPublisher {
         } else {
           console.log('[Publisher] Auto Enhance SDPMessage is valid.')
         }
-        
-        await peerConnection.setLocalDescription(description)
-        
-        // send offer back with enhanced SDP
-        wsConnection.send('{"direction":"publish", "command":"sendOffer", "streamInfo":'+JSON.stringify(streamInfo)+', "sdp":'+JSON.stringify(description)+', "userData":'+JSON.stringify(this.userData)+'}');
-        
-        this.peerConnection = peerConnection
-        this.statusListener && this.statusListener()
-        
-        console.log('[Publisher] Publishing with streamName=', streamName)
+        console.log('[Publisher] Enhance mode updated!')
       }
+        
+      await peerConnection.setLocalDescription(description)
+      console.log('[Publisher] Assigned local description!')
+      
+      // send offer back with enhanced SDP
+      const offerMessage = '{"direction":"publish", "command":"sendOffer", "streamInfo":'+JSON.stringify(streamInfo)+', "sdp":'+JSON.stringify(description)+', "userData":'+JSON.stringify(this.userData)+'}'
+      
+      this.peerConnection = peerConnection
+      this.statusListener && this.statusListener()
+      
+      console.log('[Publisher] Publishing with streamName=', streamName)
 
       // Waiting for Message result.
-      await negotiationClosure
+      await negotiationClosure(offerMessage)
     } catch(error) {
       console.error('[Publisher] Publishing stream failed', error)
       throw error

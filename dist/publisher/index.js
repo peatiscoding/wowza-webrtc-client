@@ -280,7 +280,7 @@ var WebRTCPublisher = /** @class */ (function () {
     };
     WebRTCPublisher.prototype._connect = function (streamName) {
         return __awaiter(this, void 0, void 0, function () {
-            var conf, wsURL, streamInfo, videoBitrate, audioBitrate, videoFrameRate, wsConnection, negotiationClosure, localStream, peerConnection, pc, localTracks, localTrack, description, originalSdp, enhancer, error_2;
+            var conf, wsURL, streamInfo, videoBitrate, audioBitrate, videoFrameRate, wsConnection, negotiationClosure, localStream, peerConnection, pc, localTracks, localTrack, description, originalSdp, enhancer, offerMessage, error_2;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -307,7 +307,8 @@ var WebRTCPublisher = /** @class */ (function () {
                             console.log("[Publisher] wsConnection.onerror: " + JSON.stringify(evt));
                             _this._reportError(new Error(JSON.stringify(evt)));
                         };
-                        negotiationClosure = new Promise(function (resolve, reject) {
+                        negotiationClosure = function (offerMessage) { return new Promise(function (resolve, reject) {
+                            console.log('[Publisher] enter nego closure!');
                             wsConnection.onmessage = function (evt) {
                                 // Parse incoming message.
                                 var msgJSON = JSON.parse(evt.data);
@@ -365,13 +366,14 @@ var WebRTCPublisher = /** @class */ (function () {
                                     });
                                 }); }).catch(reject);
                             };
-                        });
+                            wsConnection.send(offerMessage);
+                        }); };
                         // save it.
                         this.wsConnection = wsConnection;
                         console.log('[Publisher] wsConnection ready!');
                         _a.label = 2;
                     case 2:
-                        _a.trys.push([2, 7, , 8]);
+                        _a.trys.push([2, 6, , 7]);
                         localStream = this.localStream;
                         if (!localStream) {
                             throw new Error('Invalid state, cannot open connection without video stream to publish.');
@@ -397,46 +399,45 @@ var WebRTCPublisher = /** @class */ (function () {
                         return [4 /*yield*/, peerConnection.createOffer()];
                     case 3:
                         description = _a.sent();
-                        if (!(this.enhanceMode === 'auto' || this.enhanceMode === true)) return [3 /*break*/, 5];
-                        originalSdp = description.sdp;
-                        enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
-                        'opus' // AudioMode: 'OPUS'
-                        );
-                        description.sdp = enhancer.enhance(description.sdp, {
-                            audioBitrate: audioBitrate,
-                            videoBitrate: videoBitrate,
-                            videoFrameRate: videoFrameRate
-                        });
-                        if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
-                            console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.');
-                            description.sdp = originalSdp;
+                        console.log('[Publisher] offer created!');
+                        if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
+                            originalSdp = description.sdp;
+                            enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+                            'opus' // AudioMode: 'OPUS'
+                            );
+                            description.sdp = enhancer.enhance(description.sdp, {
+                                audioBitrate: audioBitrate,
+                                videoBitrate: videoBitrate,
+                                videoFrameRate: videoFrameRate
+                            });
+                            if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
+                                console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.');
+                                description.sdp = originalSdp;
+                            }
+                            else {
+                                console.log('[Publisher] Auto Enhance SDPMessage is valid.');
+                            }
+                            console.log('[Publisher] Enhance mode updated!');
                         }
-                        else {
-                            console.log('[Publisher] Auto Enhance SDPMessage is valid.');
-                        }
-                        return [4 /*yield*/, peerConnection.setLocalDescription(description)
-                            // send offer back with enhanced SDP
-                        ];
+                        return [4 /*yield*/, peerConnection.setLocalDescription(description)];
                     case 4:
                         _a.sent();
-                        // send offer back with enhanced SDP
-                        wsConnection.send('{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}');
+                        console.log('[Publisher] Assigned local description!');
+                        offerMessage = '{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}';
                         this.peerConnection = peerConnection;
                         this.statusListener && this.statusListener();
                         console.log('[Publisher] Publishing with streamName=', streamName);
-                        _a.label = 5;
-                    case 5: 
-                    // Waiting for Message result.
-                    return [4 /*yield*/, negotiationClosure];
-                    case 6:
+                        // Waiting for Message result.
+                        return [4 /*yield*/, negotiationClosure(offerMessage)];
+                    case 5:
                         // Waiting for Message result.
                         _a.sent();
-                        return [3 /*break*/, 8];
-                    case 7:
+                        return [3 /*break*/, 7];
+                    case 6:
                         error_2 = _a.sent();
                         console.error('[Publisher] Publishing stream failed', error_2);
                         throw error_2;
-                    case 8: return [2 /*return*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });
