@@ -40,10 +40,11 @@ var lodash_1 = require("lodash");
 var utils_1 = require("../utils");
 var logger_1 = require("../logger");
 var WebRTCPublisher = /** @class */ (function () {
-    function WebRTCPublisher(config, mediaStreamConstraints, enhanceMode, statusListener) {
+    function WebRTCPublisher(config, mediaStreamConstraints, enhanceMode, codecMode, statusListener) {
         var _this = this;
         this.config = config;
         this.enhanceMode = enhanceMode;
+        this.codecMode = codecMode;
         this.statusListener = statusListener;
         this.userAgent = navigator.userAgent;
         this.currentContraints = {
@@ -399,10 +400,10 @@ var WebRTCPublisher = /** @class */ (function () {
                         return [4 /*yield*/, peerConnection.createOffer()];
                     case 3:
                         description = _a.sent();
-                        console.log('[Publisher] offer created!');
+                        console.log('[Publisher] offer created!', description);
                         if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
                             originalSdp = description.sdp;
-                            enhancer = new SDPMessageProcessor_1.SDPMessageProcessor('42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+                            enhancer = new SDPMessageProcessor_1.SDPMessageProcessor(this.codecMode === 'VPX' ? 'VPX' : '42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VPX'
                             'opus' // AudioMode: 'OPUS'
                             );
                             description.sdp = enhancer.enhance(description.sdp, {
@@ -411,7 +412,8 @@ var WebRTCPublisher = /** @class */ (function () {
                                 videoFrameRate: videoFrameRate
                             });
                             if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
-                                console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.');
+                                console.log('[Publisher] Bad SDP: ', description.sdp);
+                                console.log('[Publisher] ... revert');
                                 description.sdp = originalSdp;
                             }
                             else {

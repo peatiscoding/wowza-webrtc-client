@@ -5,10 +5,11 @@ export class SDPMessageProcessor {
   private audioIndex = -1
   private videoIndex = -1
 
-  constructor(private videoMode: '42e01f'|'VP9', private audioMode: string) {
+  constructor(private videoMode: '42e01f'|'VPX', private audioMode: string) {
   }
 
   public enhance(_sdpStr?: string, enhanceData?: any): string {
+    console.log('[Publisher] Enhancing SDP ...', this.videoMode, this.audioMode)
     let sdpStr = _sdpStr || ''
     let sdpLines = sdpStr.split(/\r\n/);
     let sdpSection: 'audio'|'video'|'bandwidth'|'header' = 'header'
@@ -17,10 +18,11 @@ export class SDPMessageProcessor {
   
     // Firefox provides a reasonable SDP, Chrome is just odd
     // so we have to doing a little mundging to make it all work
-    if ( !sdpStr.includes("THIS_IS_SDPARTA") || this.videoMode.includes("VP9") ) {
+    if ( !sdpStr.includes("THIS_IS_SDPARTA") || this.videoMode === 'VPX' ) {
       for(const sdpIndex in sdpLines) {
         const sdpLine = sdpLines[sdpIndex]
   
+        // Skip empty line
         if (sdpLine.length <= 0)
           continue
   
@@ -41,6 +43,7 @@ export class SDPMessageProcessor {
     for(const sdpIndex in sdpLines) {
       const sdpLine = sdpLines[sdpIndex];
   
+      // Skip empty line
       if (sdpLine.length <= 0)
         continue
   
@@ -122,7 +125,7 @@ export class SDPMessageProcessor {
    */
   private forceH264(sdp: string): string {
     console.log(`Forcing SDP: ${sdp}`)
-    return sdp.replace('42001f', '42e01f')
+    return sdp.replace(/profile-level-id=(42001f|64C016)/i, '42e01f')
         // .replace(/([\r\n]{2})[^=]+([a-z]=)/g, '$1$2')
   }
 
@@ -134,13 +137,19 @@ export class SDPMessageProcessor {
     return /([\r\n]{2})[^=]+([a-z]=)/.test(sdpMessage)
   }
 
+  /**
+   * Select the matched SDP.
+   * 
+   * @param profile 
+   * @param type 
+   */
   private deliverCheckLine(profile: string, type: 'video'|'audio'): string {
     let outputString = ''
     for(const line in this.sdpOutput) {
       const lineInUse = this.sdpOutput[line]
       outputString += line
-      if (lineInUse.includes(profile)) {
-        if (profile.includes("VP9") || profile.includes("VP8")) {
+      if (lineInUse.includes(profile) || 'VPX' === profile && /VP(8|9)/.test(lineInUse)) {
+        if (profile === 'VPX') {
           let output = ''
           const outputs = lineInUse.split(/\r\n/)
           for(const position in outputs) {
@@ -174,6 +183,11 @@ export class SDPMessageProcessor {
     return outputString
   }
 
+  // Collect SDP Output format. And buffer them for selection through `deliverCheckLine` method.
+  // This method will index SDP messages as 
+  // {
+  //    [codecId]: <sdp_output_message>
+  // }
   private checkLine(line: string): boolean {
     if (line.startsWith('a=rtpmap') || line.startsWith('a=rtcp-fb') || line.startsWith('a=fmtp')) {
       const res = line.split(':')

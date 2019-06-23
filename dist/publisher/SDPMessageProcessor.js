@@ -10,6 +10,7 @@ var SDPMessageProcessor = /** @class */ (function () {
         this.videoIndex = -1;
     }
     SDPMessageProcessor.prototype.enhance = function (_sdpStr, enhanceData) {
+        console.log('[Publisher] Enhancing SDP ...', this.videoMode, this.audioMode);
         var sdpStr = _sdpStr || '';
         var sdpLines = sdpStr.split(/\r\n/);
         var sdpSection = 'header';
@@ -17,9 +18,10 @@ var SDPMessageProcessor = /** @class */ (function () {
         var sdpStrRet = '';
         // Firefox provides a reasonable SDP, Chrome is just odd
         // so we have to doing a little mundging to make it all work
-        if (!sdpStr.includes("THIS_IS_SDPARTA") || this.videoMode.includes("VP9")) {
+        if (!sdpStr.includes("THIS_IS_SDPARTA") || this.videoMode === 'VPX') {
             for (var sdpIndex in sdpLines) {
                 var sdpLine = sdpLines[sdpIndex];
+                // Skip empty line
                 if (sdpLine.length <= 0)
                     continue;
                 var doneCheck = this.checkLine(sdpLine);
@@ -36,6 +38,7 @@ var SDPMessageProcessor = /** @class */ (function () {
         }
         for (var sdpIndex in sdpLines) {
             var sdpLine = sdpLines[sdpIndex];
+            // Skip empty line
             if (sdpLine.length <= 0)
                 continue;
             if (sdpLine.indexOf('m=audio') == 0 && this.audioIndex != -1) {
@@ -114,7 +117,7 @@ var SDPMessageProcessor = /** @class */ (function () {
      */
     SDPMessageProcessor.prototype.forceH264 = function (sdp) {
         console.log("Forcing SDP: " + sdp);
-        return sdp.replace('42001f', '42e01f');
+        return sdp.replace(/profile-level-id=(42001f|64C016)/i, '42e01f');
         // .replace(/([\r\n]{2})[^=]+([a-z]=)/g, '$1$2')
     };
     /**
@@ -124,13 +127,19 @@ var SDPMessageProcessor = /** @class */ (function () {
     SDPMessageProcessor.isCorrupted = function (sdpMessage) {
         return /([\r\n]{2})[^=]+([a-z]=)/.test(sdpMessage);
     };
+    /**
+     * Select the matched SDP.
+     *
+     * @param profile
+     * @param type
+     */
     SDPMessageProcessor.prototype.deliverCheckLine = function (profile, type) {
         var outputString = '';
         for (var line in this.sdpOutput) {
             var lineInUse = this.sdpOutput[line];
             outputString += line;
-            if (lineInUse.includes(profile)) {
-                if (profile.includes("VP9") || profile.includes("VP8")) {
+            if (lineInUse.includes(profile) || 'VPX' === profile && /VP(8|9)/.test(lineInUse)) {
+                if (profile === 'VPX') {
                     var output = '';
                     var outputs = lineInUse.split(/\r\n/);
                     for (var position in outputs) {
@@ -160,6 +169,11 @@ var SDPMessageProcessor = /** @class */ (function () {
         }
         return outputString;
     };
+    // Collect SDP Output format. And buffer them for selection through `deliverCheckLine` method.
+    // This method will index SDP messages as 
+    // {
+    //    [codecId]: <sdp_output_message>
+    // }
     SDPMessageProcessor.prototype.checkLine = function (line) {
         if (line.startsWith('a=rtpmap') || line.startsWith('a=rtcp-fb') || line.startsWith('a=fmtp')) {
             var res = line.split(':');

@@ -4,7 +4,7 @@ export declare class SDPMessageProcessor {
     private sdpOutput;
     private audioIndex;
     private videoIndex;
-    constructor(videoMode: '42e01f' | 'VP9', audioMode: string);
+    constructor(videoMode: '42e01f' | 'VPX', audioMode: string);
     enhance(_sdpStr?: string, enhanceData?: any): string;
     /**
      * Fix Huawei OS failed to handle H264 configuration correctly..
@@ -17,6 +17,12 @@ export declare class SDPMessageProcessor {
      * @param sdpMessage
      */
     static isCorrupted(sdpMessage: string): boolean;
+    /**
+     * Select the matched SDP.
+     *
+     * @param profile
+     * @param type
+     */
     private deliverCheckLine;
     private checkLine;
     private getrtpMapID;

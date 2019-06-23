@@ -67,7 +67,7 @@ export class WebRTCPublisher {
     return this._lastError
   }
 
-  constructor(private config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, public enhanceMode: 'auto'|boolean, private statusListener?: () => void) {
+  constructor(private config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, public enhanceMode: 'auto'|boolean, public codecMode: 'VPX'|'H264', private statusListener?: () => void) {
     // Validate if browser support getUserMedia or not?
     if (!supportGetUserMedia()) {
       throw new Error('Your browser does not support getUserMedia API')
@@ -304,14 +304,14 @@ export class WebRTCPublisher {
       
       // Create offer
       const description = await peerConnection.createOffer()
-      console.log('[Publisher] offer created!')
+      console.log('[Publisher] offer created!', description)
       
       if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
         const originalSdp = description.sdp
         
         // enhance sdp message
         const enhancer = new SDPMessageProcessor(
-          '42e01f',    // VideoMode: 'H264=42e01f' or 'VP9=VP9'
+          this.codecMode === 'VPX' ? 'VPX' : '42e01f',    // VideoMode: 'H264=42e01f' or 'VP9=VPX'
           'opus'    // AudioMode: 'OPUS'
         )
         description.sdp = enhancer.enhance(description.sdp, {
@@ -321,7 +321,8 @@ export class WebRTCPublisher {
         })
         
         if (this.enhanceMode === 'auto' && SDPMessageProcessor.isCorrupted(description.sdp)) {
-          console.log('[Publisher] Auto Enhance SDPMessage is corrupted revert to original.')
+          console.log('[Publisher] Bad SDP: ', description.sdp)
+          console.log('[Publisher] ... revert')
           description.sdp = originalSdp
         } else {
           console.log('[Publisher] Auto Enhance SDPMessage is valid.')
