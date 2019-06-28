@@ -331,7 +331,7 @@ var WebRTCPublisher = /** @class */ (function () {
                                                 }
                                                 sdpData = msgJSON['sdp'];
                                                 if (!(sdpData !== undefined)) return [3 /*break*/, 2];
-                                                console.log("_ sdp: " + sdpData);
+                                                console.log("_ sdp: " + JSON.stringify(sdpData));
                                                 return [4 /*yield*/, peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))];
                                             case 1:
                                                 _c.sent();
@@ -347,7 +347,7 @@ var WebRTCPublisher = /** @class */ (function () {
                                             case 3:
                                                 if (!(_i < _a.length)) return [3 /*break*/, 6];
                                                 index = _a[_i];
-                                                console.log('_ iceCandidates: ' + iceCandidates[index]);
+                                                console.log('_ iceCandidates: ' + JSON.stringify(iceCandidates[index]));
                                                 return [4 /*yield*/, peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]))];
                                             case 4:
                                                 _c.sent();
@@ -382,8 +382,17 @@ var WebRTCPublisher = /** @class */ (function () {
                         peerConnection = new RTCPeerConnection({ iceServers: [] });
                         peerConnection.onicecandidate = function (event) {
                             if (event.candidate != null) {
-                                console.log("[Publisher] [PC] gotIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
+                                console.log("[Publisher] [PC] onIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
                             }
+                        };
+                        peerConnection.onicecandidateerror = function (event) {
+                            console.error("[Publisher] [PC] onIceCandidateError: " + JSON.stringify(event));
+                        };
+                        peerConnection.onconnectionstatechange = function (event) {
+                            console.log("[Publisher] [PC] onConnectionStateChange: " + JSON.stringify(event));
+                        };
+                        peerConnection.onsignalingstatechange = function (event) {
+                            console.log("[Publisher] [PC] onSignaliingStateChange: " + JSON.stringify(event));
                         };
                         pc = peerConnection;
                         if (!pc.addStream) {
@@ -451,8 +460,20 @@ var WebRTCPublisher = /** @class */ (function () {
     WebRTCPublisher.prototype.disconnect = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                this.peerConnection && this.peerConnection.close();
-                this.wsConnection && this.wsConnection.close();
+                if (this.peerConnection) {
+                    this.peerConnection.close();
+                    console.log('[Publisher] Remove peerConnection ... calling close()', this.peerConnection);
+                }
+                else {
+                    console.log('[Publisher] Remove peerConnection ... peerConnection already removed.', this.peerConnection);
+                }
+                if (this.wsConnection) {
+                    this.wsConnection.close();
+                    console.log('[Publisher] Remove wsConnection ... calling close()', this.wsConnection);
+                }
+                else {
+                    console.log('[Publisher] Remove wsConnection ... wsConnection already removed.');
+                }
                 this.peerConnection = undefined;
                 this.wsConnection = undefined;
                 this._stopStream();
@@ -464,18 +485,22 @@ var WebRTCPublisher = /** @class */ (function () {
     };
     WebRTCPublisher.prototype._stopStream = function () {
         // if there is a localStream object, and they are no longer used.
+        console.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']');
         if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
-            console.log('[Publisher] Trying to stop stream', this.localStream);
+            console.log('[Publisher] Trying to stop stream');
             if (this.localStream.stop) {
+                console.log('[Publisher] Stopping localStream object.');
                 this.localStream.stop();
             }
             else {
                 for (var _i = 0, _a = this.localStream.getTracks(); _i < _a.length; _i++) {
                     var track = _a[_i];
+                    console.log('[Publisher] Stopping localStream\'s track:', track);
                     track.stop();
                 }
             }
             this.localStream = undefined;
+            console.log('[Publisher] Unbind local stream', this.localStream);
         }
     };
     return WebRTCPublisher;

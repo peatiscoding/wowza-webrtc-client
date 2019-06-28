@@ -248,14 +248,14 @@ export class WebRTCPublisher {
 
           const sdpData = msgJSON['sdp']
           if (sdpData !== undefined) {
-            console.log(`_ sdp: ${sdpData}`)
+            console.log(`_ sdp: ${JSON.stringify(sdpData)}`)
             await peerConnection.setRemoteDescription(new RTCSessionDescription(sdpData))
           }
 
           const iceCandidates = msgJSON['iceCandidates']
           if (iceCandidates !== undefined) {
             for(const index in iceCandidates) {
-              console.log('_ iceCandidates: ' + iceCandidates[index]);
+              console.log('_ iceCandidates: ' + JSON.stringify(iceCandidates[index]));
               await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]));
             }
           }
@@ -285,8 +285,20 @@ export class WebRTCPublisher {
       const peerConnection = new RTCPeerConnection({ iceServers: [] })
       peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
         if (event.candidate != null) {
-          console.log(`[Publisher] [PC] gotIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
+          console.log(`[Publisher] [PC] onIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
         }
+      }
+
+      peerConnection.onicecandidateerror = (event: RTCPeerConnectionIceErrorEvent) => {
+        console.error(`[Publisher] [PC] onIceCandidateError: ${JSON.stringify(event)}`)
+      }
+
+      peerConnection.onconnectionstatechange = (event: Event) => {
+        console.log(`[Publisher] [PC] onConnectionStateChange: ${JSON.stringify(event)}`)
+      }
+
+      peerConnection.onsignalingstatechange = (event: Event) => {
+        console.log(`[Publisher] [PC] onSignaliingStateChange: ${JSON.stringify(event)}`)
       }
       
       // Swizzle between Webkit API versions Support here ...
@@ -355,8 +367,18 @@ export class WebRTCPublisher {
   }
 
   public async disconnect() {
-    this.peerConnection && this.peerConnection.close()
-    this.wsConnection && this.wsConnection.close()
+    if (this.peerConnection) {
+      this.peerConnection.close()
+      console.log('[Publisher] Remove peerConnection ... calling close()', this.peerConnection)
+    } else {
+      console.log('[Publisher] Remove peerConnection ... peerConnection already removed.', this.peerConnection)
+    }
+    if (this.wsConnection) {
+      this.wsConnection.close()
+      console.log('[Publisher] Remove wsConnection ... calling close()', this.wsConnection)
+    } else {
+      console.log('[Publisher] Remove wsConnection ... wsConnection already removed.')
+    }
 
     this.peerConnection = undefined
     this.wsConnection = undefined
@@ -369,16 +391,20 @@ export class WebRTCPublisher {
 
   private _stopStream() {
     // if there is a localStream object, and they are no longer used.
+    console.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']')
     if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
-      console.log('[Publisher] Trying to stop stream', this.localStream)
+      console.log('[Publisher] Trying to stop stream')
       if (this.localStream.stop) {
+        console.log('[Publisher] Stopping localStream object.')
         this.localStream.stop()
       } else {
         for(const track of this.localStream.getTracks()) {
+          console.log('[Publisher] Stopping localStream\'s track:', track)
           track.stop()
         }
       }
       this.localStream = undefined
+      console.log('[Publisher] Unbind local stream', this.localStream)
     }
   }
 }
