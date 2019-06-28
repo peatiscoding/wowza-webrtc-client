@@ -22,6 +22,9 @@ export declare class WebRTCPublisher {
     readonly isPreviewEnabled: boolean;
     readonly streamSourceConstraints: MediaStreamConstraints;
     readonly lastError: Error | undefined;
+    readonly rtcPeerConnectionState: RTCPeerConnectionState | undefined;
+    readonly rtcSignalingState: RTCSignalingState | undefined;
+    readonly rtcIceConnectionState: RTCIceConnectionState | undefined;
     constructor(config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, enhanceMode: 'auto' | boolean, codecMode: 'VPX' | 'H264', statusListener?: (() => void) | undefined);
     switchStream(constraints: MediaStreamConstraints, force?: boolean): Promise<void>;
     /**
@@ -36,7 +39,18 @@ export declare class WebRTCPublisher {
      * @throws Error upon failure to create connection.
      */
     connect(streamName: string): Promise<void>;
+    /**
+     * Try to connect to Wowza Server. Will fullfill when stream has been completely established.
+     *
+     * @param streamName
+     */
     private _connect;
+    /**
+     * Set up peerConnection object with abundant event listeners.
+     *
+     * @return RTCPeerConnection
+     */
+    private _createPeerConnection;
     private _reportError;
     disconnect(): Promise<void>;
     private _stopStream;

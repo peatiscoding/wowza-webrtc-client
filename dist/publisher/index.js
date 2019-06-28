@@ -139,10 +139,31 @@ var WebRTCPublisher = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(WebRTCPublisher.prototype, "rtcPeerConnectionState", {
+        get: function () {
+            return this.peerConnection && this.peerConnection.connectionState;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WebRTCPublisher.prototype, "rtcSignalingState", {
+        get: function () {
+            return this.peerConnection && this.peerConnection.signalingState;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WebRTCPublisher.prototype, "rtcIceConnectionState", {
+        get: function () {
+            return this.peerConnection && this.peerConnection.iceConnectionState;
+        },
+        enumerable: true,
+        configurable: true
+    });
     WebRTCPublisher.prototype.switchStream = function (constraints, force) {
         if (force === void 0) { force = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var current, target;
+            var current, target, ls;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -155,9 +176,9 @@ var WebRTCPublisher = /** @class */ (function () {
                         this.currentContraints = constraints;
                         // Disable current stream before claiming a new one.
                         if (this.localStream) {
-                            // stop current tracks
-                            if (this.localStream.stop) {
-                                this.localStream.stop();
+                            ls = this.localStream;
+                            if (ls.stop) {
+                                ls.stop();
                             }
                             else {
                                 this.localStream.getTracks().forEach(function (o) { return o.stop(); });
@@ -279,12 +300,17 @@ var WebRTCPublisher = /** @class */ (function () {
             });
         });
     };
+    /**
+     * Try to connect to Wowza Server. Will fullfill when stream has been completely established.
+     *
+     * @param streamName
+     */
     WebRTCPublisher.prototype._connect = function (streamName) {
         return __awaiter(this, void 0, void 0, function () {
-            var conf, wsURL, streamInfo, videoBitrate, audioBitrate, videoFrameRate, wsConnection, negotiationClosure, localStream, peerConnection, pc, localTracks, localTrack, description, originalSdp, enhancer, offerMessage, error_2;
+            var conf, wsURL, streamInfo, videoBitrate, audioBitrate, videoFrameRate, wsConnection, negotiationClosure, _a, _pc, pcConnectedPromise, description, originalSdp, enhancer, offerMessage, error_2;
             var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         if (this.peerConnection) {
                             throw new Error('There is already an active peerConnection!');
@@ -301,7 +327,7 @@ var WebRTCPublisher = /** @class */ (function () {
                         videoFrameRate = conf.WEBRTC_FRAME_RATE;
                         return [4 /*yield*/, utils_1.createWebSocket(wsURL)];
                     case 1:
-                        wsConnection = _a.sent();
+                        wsConnection = _b.sent();
                         wsConnection.binaryType = 'arraybuffer';
                         wsConnection.onclose = function () { return console.log('[Publisher] wsConnection.onclose'); };
                         wsConnection.onerror = function (evt) {
@@ -372,44 +398,15 @@ var WebRTCPublisher = /** @class */ (function () {
                         // save it.
                         this.wsConnection = wsConnection;
                         console.log('[Publisher] wsConnection ready!');
-                        _a.label = 2;
+                        _b.label = 2;
                     case 2:
-                        _a.trys.push([2, 6, , 7]);
-                        localStream = this.localStream;
-                        if (!localStream) {
-                            throw new Error('Invalid state, cannot open connection without video stream to publish.');
-                        }
-                        peerConnection = new RTCPeerConnection({ iceServers: [] });
-                        peerConnection.onicecandidate = function (event) {
-                            if (event.candidate != null) {
-                                console.log("[Publisher] [PC] onIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
-                            }
-                        };
-                        peerConnection.onicecandidateerror = function (event) {
-                            console.error("[Publisher] [PC] onIceCandidateError: " + JSON.stringify(event));
-                        };
-                        peerConnection.onconnectionstatechange = function (event) {
-                            console.log("[Publisher] [PC] onConnectionStateChange: " + JSON.stringify(event));
-                        };
-                        peerConnection.onsignalingstatechange = function (event) {
-                            console.log("[Publisher] [PC] onSignaliingStateChange: " + JSON.stringify(event));
-                        };
-                        pc = peerConnection;
-                        if (!pc.addStream) {
-                            {
-                                localTracks = localStream.getTracks();
-                                for (localTrack in localTracks) {
-                                    peerConnection.addTrack(localTracks[localTrack], localStream);
-                                }
-                            }
-                        }
-                        else {
-                            pc.addStream(localStream);
-                        }
-                        return [4 /*yield*/, peerConnection.createOffer()];
+                        _b.trys.push([2, 7, , 8]);
+                        _a = this._createPeerConnection(), _pc = _a.pc, pcConnectedPromise = _a.pcConnectedPromise;
+                        return [4 /*yield*/, _pc.createOffer()];
                     case 3:
-                        description = _a.sent();
+                        description = _b.sent();
                         console.log('[Publisher] offer created!', description);
+                        // SDP Munging - hijack SDP message to produce a selected SDP.
                         if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
                             originalSdp = description.sdp;
                             enhancer = new SDPMessageProcessor_1.SDPMessageProcessor(this.codecMode === 'VPX' ? 'VPX' : '42e01f', // VideoMode: 'H264=42e01f' or 'VP9=VPX'
@@ -430,28 +427,120 @@ var WebRTCPublisher = /** @class */ (function () {
                             }
                             console.log('[Publisher] Enhance mode updated!');
                         }
-                        return [4 /*yield*/, peerConnection.setLocalDescription(description)];
+                        return [4 /*yield*/, _pc.setLocalDescription(description)];
                     case 4:
-                        _a.sent();
+                        _b.sent();
                         console.log('[Publisher] Assigned local description!');
                         offerMessage = '{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}';
-                        this.peerConnection = peerConnection;
+                        this.peerConnection = _pc;
                         this.statusListener && this.statusListener();
                         console.log('[Publisher] Publishing with streamName=', streamName);
                         // Waiting for Message result.
-                        return [4 /*yield*/, negotiationClosure(offerMessage)];
+                        return [4 /*yield*/, negotiationClosure(offerMessage)
+                            // Waiting for Connected state
+                        ];
                     case 5:
                         // Waiting for Message result.
-                        _a.sent();
-                        return [3 /*break*/, 7];
+                        _b.sent();
+                        // Waiting for Connected state
+                        return [4 /*yield*/, pcConnectedPromise];
                     case 6:
-                        error_2 = _a.sent();
+                        // Waiting for Connected state
+                        _b.sent();
+                        return [3 /*break*/, 8];
+                    case 7:
+                        error_2 = _b.sent();
                         console.error('[Publisher] Publishing stream failed', error_2);
                         throw error_2;
-                    case 7: return [2 /*return*/];
+                    case 8: return [2 /*return*/];
                 }
             });
         });
+    };
+    /**
+     * Set up peerConnection object with abundant event listeners.
+     *
+     * @return RTCPeerConnection
+     */
+    WebRTCPublisher.prototype._createPeerConnection = function () {
+        var _this = this;
+        var localStream = this.localStream;
+        if (!localStream) {
+            throw new Error('Invalid state, cannot open connection without video stream to publish.');
+        }
+        var peerConnection = new RTCPeerConnection({ iceServers: [] });
+        peerConnection.onicecandidate = function (event) {
+            if (event.candidate != null) {
+                console.log("[Publisher] [PC] onIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
+            }
+        };
+        var connectedPromise = new Promise(function (resolve, reject) {
+            peerConnection.onicecandidateerror = function (event) {
+                var info = {
+                    errorCode: event.errorCode,
+                    errorText: event.errorText,
+                    hostCandidate: event.hostCandidate,
+                    url: event.url
+                };
+                console.error("[Publisher] [PC] onIceCandidateError: " + JSON.stringify(info));
+                if (event.errorCode >= 300 && event.errorCode <= 699) {
+                    // STUN errors are in the range 300-699. See RFC 5389, section 15.6
+                    // for a list of codes. TURN adds a few more error codes; see
+                    // RFC 5766, section 15 for details.
+                    console.error('[Publisher] [PC] ... STUN errors.');
+                }
+                else if (event.errorCode >= 700 && event.errorCode <= 799) {
+                    // Server could not be reached; a specific error number is
+                    // provided but these are not yet specified.
+                    console.error('[Publisher] [PC] ... server could not be reached.');
+                }
+            };
+            peerConnection.onsignalingstatechange = function (ev) {
+                var state = peerConnection.signalingState;
+                console.log("[Publisher] [PC] onSignalingStateChange \u21C0 " + state);
+                _this.statusListener && _this.statusListener();
+            };
+            peerConnection.oniceconnectionstatechange = function (ev) {
+                var state = peerConnection.iceConnectionState;
+                console.log("[Publisher] [PC] onIceConnectionStateChange \u21C0 " + state);
+                _this.statusListener && _this.statusListener();
+            };
+            /**
+             * Aggregated connection state has been updated.
+             *
+             * @see https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/connectionState
+             */
+            var isResolved = false;
+            peerConnection.onconnectionstatechange = function (ev) {
+                var state = peerConnection.connectionState;
+                console.log("[Publisher] [PC] onConnectionStateChange \u21C0 " + state);
+                _this.statusListener && _this.statusListener();
+                if (isResolved)
+                    return;
+                if (state === 'connected') {
+                    isResolved = true;
+                    resolve();
+                }
+                else if (state === 'failed') {
+                    isResolved = true;
+                    reject(new Error("Peer Connection state is invalid: " + state));
+                }
+            };
+            // Swizzle between Webkit API versions Support here ...
+            var pc = peerConnection;
+            if (!pc.addStream) {
+                {
+                    var localTracks = localStream.getTracks();
+                    for (var localTrack in localTracks) {
+                        peerConnection.addTrack(localTracks[localTrack], localStream);
+                    }
+                }
+            }
+            else {
+                pc.addStream(localStream);
+            }
+        });
+        return { pc: peerConnection, pcConnectedPromise: connectedPromise };
     };
     WebRTCPublisher.prototype._reportError = function (error) {
         this._lastError = error;
@@ -488,19 +577,20 @@ var WebRTCPublisher = /** @class */ (function () {
         console.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']');
         if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
             console.log('[Publisher] Trying to stop stream');
-            if (this.localStream.stop) {
+            var ls = this.localStream;
+            if (ls.stop) {
+                ls.stop();
                 console.log('[Publisher] Stopping localStream object.');
-                this.localStream.stop();
             }
             else {
                 for (var _i = 0, _a = this.localStream.getTracks(); _i < _a.length; _i++) {
                     var track = _a[_i];
-                    console.log('[Publisher] Stopping localStream\'s track:', track);
                     track.stop();
+                    console.log('[Publisher] Stopping localStream\'s track:', track);
                 }
             }
             this.localStream = undefined;
-            console.log('[Publisher] Unbind local stream', this.localStream);
+            console.log('[Publisher] Unbind local stream');
         }
     };
     return WebRTCPublisher;

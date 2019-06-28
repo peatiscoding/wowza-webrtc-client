@@ -77,7 +77,8 @@ export const queryForCamera = async (constraints: MediaStreamConstraints): Promi
   }
   const media = await getUserMedia(constraints)
   if (media) {
-    if (media.stop) { media.stop() }
+    const m = media as any
+    if (m.stop) { m.stop() }
     else {
       media.getTracks().forEach(t => t.stop())
     }

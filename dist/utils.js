@@ -104,7 +104,7 @@ exports.getUserMedia = function (constraints) { return __awaiter(_this, void 0, 
  * @param constraints
  */
 exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0, void 0, function () {
-    var devices, media;
+    var devices, media, m;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -117,8 +117,9 @@ exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0
             case 3:
                 media = _a.sent();
                 if (media) {
-                    if (media.stop) {
-                        media.stop();
+                    m = media;
+                    if (m.stop) {
+                        m.stop();
                     }
                     else {
                         media.getTracks().forEach(function (t) { return t.stop(); });
