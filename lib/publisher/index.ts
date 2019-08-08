@@ -110,6 +110,10 @@ export class WebRTCPublisher {
       console.log('[Publisher] Constraints already matched. ignore switchStream request.')
       return
     }
+    if (!RTCRtpSender.prototype.replaceTrack) {
+      console.log('[Publisher] Browser does not support switching stream on the fly.')
+      return
+    }
     this.currentContraints = constraints
 
     // Disable current stream before claiming a new one.
