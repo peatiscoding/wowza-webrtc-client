@@ -10,6 +10,7 @@ interface Window {
   mozRTCSessionDescription: any
   webkitRTCSessionDescription: any
   webkitURL: any
+  cnsl_debug: boolean | undefined
 }
 
 interface Navigator {

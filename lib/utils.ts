@@ -6,16 +6,16 @@ export const isMobileBrowser = () => {
 
 export const cnsl = {
   log: (...args: any) => {
-    console.log.apply(console, args)
+    window && window.cnsl_debug && window.console && console.log.apply(console, args)
   },
   warn: (...args: any) => {
-    console.warn.apply(console, args)
+    window && window.cnsl_debug && window.console && console.warn.apply(console, args)
   },
   error: (...args: any) => {
-    console.error.apply(console, args)
+    window && window.cnsl_debug && window.console && console.error.apply(console, args)
   },
   info: (...args: any) => {
-    console.info.apply(console, args)
+    window && window.cnsl_debug && window.console && console.info.apply(console, args)
   }
 }
 

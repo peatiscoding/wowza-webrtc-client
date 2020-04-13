@@ -180,7 +180,7 @@ var WebRTCPlayer = /** @class */ (function () {
                                 _sendGetOffer();
                             };
                             wsConnection.onmessage = function (evt) {
-                                console.log("[Player] wsConnection.onmessage: " + evt.data);
+                                utils_1.cnsl.log("[Player] wsConnection.onmessage: " + evt.data);
                                 // sanity check
                                 if (!_this.peerConnection) {
                                     var err = new Error('Invalid state, peer connection is expected.');
@@ -202,29 +202,29 @@ var WebRTCPlayer = /** @class */ (function () {
                                     }
                                 }
                                 else if (msgStatus != 200) {
-                                    console.log('[Player] SDP Data Tag ...', msgJSON.statusDescription);
+                                    utils_1.cnsl.log('[Player] SDP Data Tag ...', msgJSON.statusDescription);
                                     reject(new Error(msgJSON.statusDescription));
                                 }
                                 else {
                                     streamInfo.sessionId = lodash_1.get(msgJSON, 'streamInfo.sessionId', undefined);
                                     var sdpData = lodash_1.get(msgJSON, 'sdp', undefined);
                                     if (sdpData) {
-                                        console.log("[Player] sdp: " + JSON.stringify(sdpData));
+                                        utils_1.cnsl.log("[Player] sdp: " + JSON.stringify(sdpData));
                                         var sessionDesc = new RTCSessionDescription(sdpData);
                                         peerConnection.setRemoteDescription(sessionDesc).then(function () { return __awaiter(_this, void 0, void 0, function () {
                                             var sessionDescInit;
                                             return __generator(this, function (_a) {
                                                 switch (_a.label) {
                                                     case 0:
-                                                        console.log('[Player] Received Remote Description -> Create answer');
+                                                        utils_1.cnsl.log('[Player] Received Remote Description -> Create answer');
                                                         return [4 /*yield*/, peerConnection.createAnswer()];
                                                     case 1:
                                                         sessionDescInit = _a.sent();
-                                                        console.log('[Player] Set Local Description');
+                                                        utils_1.cnsl.log('[Player] Set Local Description');
                                                         return [4 /*yield*/, peerConnection.setLocalDescription(sessionDescInit)];
                                                     case 2:
                                                         _a.sent();
-                                                        console.log('[Player] Send Answer');
+                                                        utils_1.cnsl.log('[Player] Send Answer');
                                                         wsConnection.send('{"direction":"play", "command":"sendResponse", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(sessionDescInit) + ', "userData":' + JSON.stringify(this.userData) + '}');
                                                         return [2 /*return*/];
                                                 }
@@ -234,7 +234,7 @@ var WebRTCPlayer = /** @class */ (function () {
                                     var iceCandidates = msgJSON.iceCandidates;
                                     if (iceCandidates !== undefined) {
                                         for (var index in iceCandidates) {
-                                            console.log("[Player] iceCandidates: " + JSON.stringify(iceCandidates[index]));
+                                            utils_1.cnsl.log("[Player] iceCandidates: " + JSON.stringify(iceCandidates[index]));
                                             peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]));
                                         }
                                     }
@@ -248,7 +248,7 @@ var WebRTCPlayer = /** @class */ (function () {
                             };
                             wsConnection.onclose = function () { return utils_1.cnsl.log('[Player] wsConnection.onclose'); };
                             wsConnection.onerror = function (evt) {
-                                console.log('[Player] wsConnection.onerror: ' + JSON.stringify(evt));
+                                utils_1.cnsl.log('[Player] wsConnection.onerror: ' + JSON.stringify(evt));
                                 reject(new Error(JSON.stringify(evt)));
                             };
                             defineCanceller(function () {

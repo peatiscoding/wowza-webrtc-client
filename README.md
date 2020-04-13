@@ -24,6 +24,9 @@ const config: WebRTCConfiguration = {
   WEBRTC_AUDIO_BIT_RATE: 64,
   WEBRTC_VIDEO_BIT_RATE: 360,
 }
+
+// To print debug messages.
+window.cnsl_debug = true
 ```
 
 **Using Player**
