@@ -1,6 +1,6 @@
 import { WebRTCConfiguration } from '../interface'
 import { get } from 'lodash'
-import CancellablePromise, { isMobileBrowser, cancellable } from '../utils'
+import CancellablePromise, { isMobileBrowser, cancellable, cnsl } from '../utils'
 
 export interface WebRTCPlayerStatus {
   isMuted?: boolean
@@ -81,7 +81,7 @@ export class WebRTCPlayer {
     }
 
     const _assignStream = (stream: MediaStream, asOwner: boolean) => {
-      console.info('[Player] Assigning stream', stream)
+      cnsl.info('[Player] Assigning stream', stream)
       if (asOwner) {
         this.currentStreamName = streamName
       }
@@ -89,7 +89,7 @@ export class WebRTCPlayer {
       try {
         this.hostElement.srcObject = stream
       } catch (error) {
-        console.warn('[Player] Unable to assign stream: ', stream, 'to element:', this.hostElement, 'because', error)
+        cnsl.warn('[Player] Unable to assign stream: ', stream, 'to element:', this.hostElement, 'because', error)
         this.hostElement.src = window.URL.createObjectURL(stream)
       }
     }
@@ -117,10 +117,10 @@ export class WebRTCPlayer {
 
       wsConnection.onopen = () => {
         //
-        console.log('[Player] onopen')
+        cnsl.log('[Player] onopen')
         const peerConnection = new RTCPeerConnection({ iceServers: [] })
         peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-          console.log('[Player] onicecandidate', event)
+          cnsl.log('[Player] onicecandidate', event)
         }
 
         // Test if onaddstream available?
@@ -128,13 +128,13 @@ export class WebRTCPlayer {
         // ontrack is available.
         if (typeof pc.ontrack !== 'undefined') {
           peerConnection.ontrack = (ev: RTCTrackEvent) => {
-            console.log('[Player] gotRemoteTrack: kind: ' + ev.track.kind + ' stream: ' + ev.streams[0])
+            cnsl.log('[Player] gotRemoteTrack: kind: ' + ev.track.kind + ' stream: ' + ev.streams[0])
             // Assign track to remoteVideo
             _assignStream(ev.streams[0], true)
           }
         } else {
           pc.onaddstream = (event: any) => {
-            console.log('[Player] gotRemoteStream: ', event.stream)
+            cnsl.log('[Player] gotRemoteStream: ', event.stream)
             _assignStream(event.stream, true)
           }
         }
@@ -149,7 +149,7 @@ export class WebRTCPlayer {
       }
 
       wsConnection.onmessage = (evt: MessageEvent) => {
-        console.log(`[Player] wsConnection.onmessage: ${evt.data}`);
+        cnsl.log(`[Player] wsConnection.onmessage: ${evt.data}`);
         // sanity check
         if (!this.peerConnection) {
           const err = new Error('Invalid state, peer connection is expected.')
@@ -172,22 +172,22 @@ export class WebRTCPlayer {
             reject(new Error('Auto retry exhausted'))
           }
         } else if (msgStatus != 200) {
-          console.log('[Player] SDP Data Tag ...', msgJSON.statusDescription)
+          cnsl.log('[Player] SDP Data Tag ...', msgJSON.statusDescription)
           reject(new Error(msgJSON.statusDescription))
         } else {
           streamInfo.sessionId = get(msgJSON, 'streamInfo.sessionId', undefined)
     
           const sdpData = get(msgJSON, 'sdp', undefined)
           if (sdpData) {
-            console.log(`[Player] sdp: ${JSON.stringify(sdpData)}`)
+            cnsl.log(`[Player] sdp: ${JSON.stringify(sdpData)}`)
 
             const sessionDesc = new RTCSessionDescription(sdpData)
             peerConnection.setRemoteDescription(sessionDesc).then(async () => {
-              console.log('[Player] Received Remote Description -> Create answer')
+              cnsl.log('[Player] Received Remote Description -> Create answer')
               const sessionDescInit = await peerConnection.createAnswer()
-              console.log('[Player] Set Local Description')
+              cnsl.log('[Player] Set Local Description')
               await peerConnection.setLocalDescription(sessionDescInit)
-              console.log('[Player] Send Answer')
+              cnsl.log('[Player] Send Answer')
               wsConnection.send('{"direction":"play", "command":"sendResponse", "streamInfo":'+JSON.stringify(streamInfo)+', "sdp":'+JSON.stringify(sessionDescInit)+', "userData":'+JSON.stringify(this.userData)+'}');
             })
           }
@@ -195,7 +195,7 @@ export class WebRTCPlayer {
           const iceCandidates = msgJSON.iceCandidates
           if (iceCandidates !== undefined) {
             for(const index in iceCandidates) {
-              console.log(`[Player] iceCandidates: ${JSON.stringify(iceCandidates[index])}`)
+              cnsl.log(`[Player] iceCandidates: ${JSON.stringify(iceCandidates[index])}`)
               peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidates[index]))
             }
           }
@@ -210,15 +210,15 @@ export class WebRTCPlayer {
         }
       }
 
-      wsConnection.onclose = () => console.log('[Player] wsConnection.onclose')
+      wsConnection.onclose = () => cnsl.log('[Player] wsConnection.onclose')
       
       wsConnection.onerror = (evt) => {
-        console.log('[Player] wsConnection.onerror: ' + JSON.stringify(evt))
+        cnsl.log('[Player] wsConnection.onerror: ' + JSON.stringify(evt))
         reject(new Error(JSON.stringify(evt)))
       }
 
       defineCanceller(() => {
-        console.log('[Player] Cancel connecting promise.')
+        cnsl.log('[Player] Cancel connecting promise.')
         wsConnection.close()
       })
     }))
@@ -255,7 +255,7 @@ export class WebRTCPlayer {
     this.connecting && this.connecting.cancel()
 
     this._reportStatus()
-    console.log('[Player] Disconnected')
+    cnsl.log('[Player] Disconnected')
   }
 
   private _reportError(error: Error) {

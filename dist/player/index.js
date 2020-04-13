@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -114,7 +115,7 @@ var WebRTCPlayer = /** @class */ (function () {
                         _a.label = 2;
                     case 2:
                         _assignStream = function (stream, asOwner) {
-                            console.info('[Player] Assigning stream', stream);
+                            utils_1.cnsl.info('[Player] Assigning stream', stream);
                             if (asOwner) {
                                 _this.currentStreamName = streamName;
                             }
@@ -123,7 +124,7 @@ var WebRTCPlayer = /** @class */ (function () {
                                 _this.hostElement.srcObject = stream;
                             }
                             catch (error) {
-                                console.warn('[Player] Unable to assign stream: ', stream, 'to element:', _this.hostElement, 'because', error);
+                                utils_1.cnsl.warn('[Player] Unable to assign stream: ', stream, 'to element:', _this.hostElement, 'because', error);
                                 _this.hostElement.src = window.URL.createObjectURL(stream);
                             }
                         };
@@ -150,24 +151,24 @@ var WebRTCPlayer = /** @class */ (function () {
                             }); };
                             wsConnection.onopen = function () {
                                 //
-                                console.log('[Player] onopen');
+                                utils_1.cnsl.log('[Player] onopen');
                                 var peerConnection = new RTCPeerConnection({ iceServers: [] });
                                 peerConnection.onicecandidate = function (event) {
-                                    console.log('[Player] onicecandidate', event);
+                                    utils_1.cnsl.log('[Player] onicecandidate', event);
                                 };
                                 // Test if onaddstream available?
                                 var pc = peerConnection;
                                 // ontrack is available.
                                 if (typeof pc.ontrack !== 'undefined') {
                                     peerConnection.ontrack = function (ev) {
-                                        console.log('[Player] gotRemoteTrack: kind: ' + ev.track.kind + ' stream: ' + ev.streams[0]);
+                                        utils_1.cnsl.log('[Player] gotRemoteTrack: kind: ' + ev.track.kind + ' stream: ' + ev.streams[0]);
                                         // Assign track to remoteVideo
                                         _assignStream(ev.streams[0], true);
                                     };
                                 }
                                 else {
                                     pc.onaddstream = function (event) {
-                                        console.log('[Player] gotRemoteStream: ', event.stream);
+                                        utils_1.cnsl.log('[Player] gotRemoteStream: ', event.stream);
                                         _assignStream(event.stream, true);
                                     };
                                 }
@@ -245,13 +246,13 @@ var WebRTCPlayer = /** @class */ (function () {
                                     resolve();
                                 }
                             };
-                            wsConnection.onclose = function () { return console.log('[Player] wsConnection.onclose'); };
+                            wsConnection.onclose = function () { return utils_1.cnsl.log('[Player] wsConnection.onclose'); };
                             wsConnection.onerror = function (evt) {
                                 console.log('[Player] wsConnection.onerror: ' + JSON.stringify(evt));
                                 reject(new Error(JSON.stringify(evt)));
                             };
                             defineCanceller(function () {
-                                console.log('[Player] Cancel connecting promise.');
+                                utils_1.cnsl.log('[Player] Cancel connecting promise.');
                                 wsConnection.close();
                             });
                         }));
@@ -285,7 +286,7 @@ var WebRTCPlayer = /** @class */ (function () {
         this.peerConnection = undefined;
         this.connecting && this.connecting.cancel();
         this._reportStatus();
-        console.log('[Player] Disconnected');
+        utils_1.cnsl.log('[Player] Disconnected');
     };
     WebRTCPlayer.prototype._reportError = function (error) {
         this.lastError = error;

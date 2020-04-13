@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -36,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var lodash_1 = require("lodash");
+var utils_1 = require("./utils");
 var Logger = /** @class */ (function () {
     function Logger(domain) {
         this.domain = domain;
@@ -51,7 +53,7 @@ var Logger = /** @class */ (function () {
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, 4, 5]);
-                        console.log('Start');
+                        utils_1.cnsl.log('Start');
                         return [4 /*yield*/, callback(lg)];
                     case 2: return [2 /*return*/, _a.sent()];
                     case 3:
@@ -89,7 +91,7 @@ var Logger = /** @class */ (function () {
     };
     Logger.prototype.flush = function () {
         this.messages.forEach(function (element) {
-            console && console[element[0]] && console[element[0]].apply(console, element[1]);
+            utils_1.cnsl && utils_1.cnsl[element[0]] && utils_1.cnsl[element[0]].apply(utils_1.cnsl, element[1]);
         });
     };
     Logger.prototype._l = function (type, args) {

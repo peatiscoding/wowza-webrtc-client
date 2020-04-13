@@ -15,8 +15,9 @@ export declare class WebRTCPlayer {
     private currentStreamName?;
     private static _currentStreams;
     static currentStream(streamName: string): MediaStream | undefined;
-    isMuted: boolean | undefined;
-    readonly isPlaying: boolean;
+    get isMuted(): boolean | undefined;
+    set isMuted(value: boolean | undefined);
+    get isPlaying(): boolean;
     constructor(config: WebRTCConfiguration, hostElement: HTMLVideoElement, onStateChanged: (status: WebRTCPlayerStatus) => void);
     /**
      * Connect to WebRTC source, acquire media, and attach to target videoElement.

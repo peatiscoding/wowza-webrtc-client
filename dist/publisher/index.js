@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -69,11 +70,11 @@ var WebRTCPublisher = /** @class */ (function () {
         window.URL = window.URL || window.webkitURL;
         // Update constraints.
         this.currentContraints = mediaStreamConstraints;
-        console.log('WebRTC Handler started (agent=', this.userAgent, this.currentContraints, ')');
+        utils_1.cnsl.log('WebRTC Handler started (agent=', this.userAgent, this.currentContraints, ')');
         utils_1.queryForCamera(this.streamSourceConstraints)
             .then(function (hasCamera) { return _this.isCameraMuted = !hasCamera; })
             .catch(function (error) {
-            console.error('[Publisher] Unable to locate Camera', error);
+            utils_1.cnsl.error('[Publisher] Unable to locate Camera', error);
         });
     }
     Object.defineProperty(WebRTCPublisher.prototype, "isHolding", {
@@ -170,11 +171,11 @@ var WebRTCPublisher = /** @class */ (function () {
                         current = JSON.stringify(this.currentContraints);
                         target = JSON.stringify(constraints);
                         if (!force && current === target) {
-                            console.log('[Publisher] Constraints already matched. ignore switchStream request.');
+                            utils_1.cnsl.log('[Publisher] Constraints already matched. ignore switchStream request.');
                             return [2 /*return*/];
                         }
                         if (!RTCRtpSender.prototype.replaceTrack) {
-                            console.log('[Publisher] Browser does not support switching stream on the fly.');
+                            utils_1.cnsl.log('[Publisher] Browser does not support switching stream on the fly.');
                             return [2 /*return*/];
                         }
                         this.currentContraints = constraints;
@@ -234,7 +235,7 @@ var WebRTCPublisher = /** @class */ (function () {
                                 this.videoElement.srcObject = stream;
                             }
                             catch (elementError) {
-                                console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', this.videoElement, stream);
+                                utils_1.cnsl.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', this.videoElement, stream);
                                 this.videoElement.src = window.URL.createObjectURL(stream);
                             }
                         }
@@ -286,13 +287,13 @@ var WebRTCPublisher = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        console.log('Trying to connect with ', streamName);
+                        utils_1.cnsl.log('Trying to connect with ', streamName);
                         this._lastError = undefined;
                         this.statusListener && this.statusListener();
                         return [4 /*yield*/, this._connect(streamName)];
                     case 1:
                         _a.sent();
-                        console.log('Publishing stream', streamName);
+                        utils_1.cnsl.log('Publishing stream', streamName);
                         return [3 /*break*/, 3];
                     case 2:
                         error_1 = _a.sent();
@@ -333,19 +334,19 @@ var WebRTCPublisher = /** @class */ (function () {
                     case 1:
                         wsConnection = _b.sent();
                         wsConnection.binaryType = 'arraybuffer';
-                        wsConnection.onclose = function () { return console.log('[Publisher] wsConnection.onclose'); };
+                        wsConnection.onclose = function () { return utils_1.cnsl.log('[Publisher] wsConnection.onclose'); };
                         wsConnection.onerror = function (evt) {
-                            console.log("[Publisher] wsConnection.onerror: " + JSON.stringify(evt));
+                            utils_1.cnsl.log("[Publisher] wsConnection.onerror: " + JSON.stringify(evt));
                             _this._reportError(new Error(JSON.stringify(evt)));
                         };
                         negotiationClosure = function (offerMessage) { return new Promise(function (resolve, reject) {
-                            console.log('[Publisher] enter nego closure!');
+                            utils_1.cnsl.log('[Publisher] enter nego closure!');
                             wsConnection.onmessage = function (evt) {
                                 // Parse incoming message.
                                 var msgJSON = JSON.parse(evt.data);
                                 var msgStatus = Number(msgJSON['status']);
                                 var msgCommand = msgJSON['command'];
-                                console.log('[Publisher] Incoming message', msgCommand);
+                                utils_1.cnsl.log('[Publisher] Incoming message', msgCommand);
                                 logger_1.Logger.wrap('[Publisher] wsConnection.onMessage', function (console) { return __awaiter(_this, void 0, void 0, function () {
                                     var peerConnection, sdpData, iceCandidates, _a, _b, _i, index;
                                     return __generator(this, function (_c) {
@@ -401,7 +402,7 @@ var WebRTCPublisher = /** @class */ (function () {
                         }); };
                         // save it.
                         this.wsConnection = wsConnection;
-                        console.log('[Publisher] wsConnection ready!');
+                        utils_1.cnsl.log('[Publisher] wsConnection ready!');
                         _b.label = 2;
                     case 2:
                         _b.trys.push([2, 7, , 8]);
@@ -409,7 +410,7 @@ var WebRTCPublisher = /** @class */ (function () {
                         return [4 /*yield*/, _pc.createOffer()];
                     case 3:
                         description = _b.sent();
-                        console.log('[Publisher] offer created!', description);
+                        utils_1.cnsl.log('[Publisher] offer created!', description);
                         // SDP Munging - hijack SDP message to produce a selected SDP.
                         if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
                             originalSdp = description.sdp;
@@ -422,23 +423,23 @@ var WebRTCPublisher = /** @class */ (function () {
                                 videoFrameRate: videoFrameRate
                             });
                             if (this.enhanceMode === 'auto' && SDPMessageProcessor_1.SDPMessageProcessor.isCorrupted(description.sdp)) {
-                                console.log('[Publisher] Bad SDP: ', description.sdp);
-                                console.log('[Publisher] ... revert');
+                                utils_1.cnsl.log('[Publisher] Bad SDP: ', description.sdp);
+                                utils_1.cnsl.log('[Publisher] ... revert');
                                 description.sdp = originalSdp;
                             }
                             else {
-                                console.log('[Publisher] Auto Enhance SDPMessage is valid.');
+                                utils_1.cnsl.log('[Publisher] Auto Enhance SDPMessage is valid.');
                             }
-                            console.log('[Publisher] Enhance mode updated!');
+                            utils_1.cnsl.log('[Publisher] Enhance mode updated!');
                         }
                         return [4 /*yield*/, _pc.setLocalDescription(description)];
                     case 4:
                         _b.sent();
-                        console.log('[Publisher] Assigned local description!');
+                        utils_1.cnsl.log('[Publisher] Assigned local description!');
                         offerMessage = '{"direction":"publish", "command":"sendOffer", "streamInfo":' + JSON.stringify(streamInfo) + ', "sdp":' + JSON.stringify(description) + ', "userData":' + JSON.stringify(this.userData) + '}';
                         this.peerConnection = _pc;
                         this.statusListener && this.statusListener();
-                        console.log('[Publisher] Publishing with streamName=', streamName);
+                        utils_1.cnsl.log('[Publisher] Publishing with streamName=', streamName);
                         // Waiting for Message result.
                         return [4 /*yield*/, negotiationClosure(offerMessage)
                             // Waiting for Connected state
@@ -454,7 +455,7 @@ var WebRTCPublisher = /** @class */ (function () {
                         return [3 /*break*/, 8];
                     case 7:
                         error_2 = _b.sent();
-                        console.error('[Publisher] Publishing stream failed', error_2);
+                        utils_1.cnsl.error('[Publisher] Publishing stream failed', error_2);
                         throw error_2;
                     case 8: return [2 /*return*/];
                 }
@@ -475,7 +476,7 @@ var WebRTCPublisher = /** @class */ (function () {
         var peerConnection = new RTCPeerConnection({ iceServers: [] });
         peerConnection.onicecandidate = function (event) {
             if (event.candidate != null) {
-                console.log("[Publisher] [PC] onIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
+                utils_1.cnsl.log("[Publisher] [PC] onIceCandidate: " + JSON.stringify({ 'ice': event.candidate }));
             }
         };
         var connectedPromise = new Promise(function (resolve, reject) {
@@ -486,27 +487,27 @@ var WebRTCPublisher = /** @class */ (function () {
                     hostCandidate: event.hostCandidate,
                     url: event.url
                 };
-                console.error("[Publisher] [PC] onIceCandidateError: " + JSON.stringify(info));
+                utils_1.cnsl.error("[Publisher] [PC] onIceCandidateError: " + JSON.stringify(info));
                 if (event.errorCode >= 300 && event.errorCode <= 699) {
                     // STUN errors are in the range 300-699. See RFC 5389, section 15.6
                     // for a list of codes. TURN adds a few more error codes; see
                     // RFC 5766, section 15 for details.
-                    console.error('[Publisher] [PC] ... STUN errors.');
+                    utils_1.cnsl.error('[Publisher] [PC] ... STUN errors.');
                 }
                 else if (event.errorCode >= 700 && event.errorCode <= 799) {
                     // Server could not be reached; a specific error number is
                     // provided but these are not yet specified.
-                    console.error('[Publisher] [PC] ... server could not be reached.');
+                    utils_1.cnsl.error('[Publisher] [PC] ... server could not be reached.');
                 }
             };
             peerConnection.onsignalingstatechange = function (ev) {
                 var state = peerConnection.signalingState;
-                console.log("[Publisher] [PC] onSignalingStateChange \u21C0 " + state);
+                utils_1.cnsl.log("[Publisher] [PC] onSignalingStateChange \u21C0 " + state);
                 _this.statusListener && _this.statusListener();
             };
             peerConnection.oniceconnectionstatechange = function (ev) {
                 var state = peerConnection.iceConnectionState;
-                console.log("[Publisher] [PC] onIceConnectionStateChange \u21C0 " + state);
+                utils_1.cnsl.log("[Publisher] [PC] onIceConnectionStateChange \u21C0 " + state);
                 _this.statusListener && _this.statusListener();
             };
             /**
@@ -517,7 +518,7 @@ var WebRTCPublisher = /** @class */ (function () {
             var isResolved = false;
             peerConnection.onconnectionstatechange = function (ev) {
                 var state = peerConnection.connectionState;
-                console.log("[Publisher] [PC] onConnectionStateChange \u21C0 " + state);
+                utils_1.cnsl.log("[Publisher] [PC] onConnectionStateChange \u21C0 " + state);
                 _this.statusListener && _this.statusListener();
                 if (isResolved)
                     return;
@@ -555,46 +556,46 @@ var WebRTCPublisher = /** @class */ (function () {
             return __generator(this, function (_a) {
                 if (this.peerConnection) {
                     this.peerConnection.close();
-                    console.log('[Publisher] Remove peerConnection ... calling close()', this.peerConnection);
+                    utils_1.cnsl.log('[Publisher] Remove peerConnection ... calling close()', this.peerConnection);
                 }
                 else {
-                    console.log('[Publisher] Remove peerConnection ... peerConnection already removed.', this.peerConnection);
+                    utils_1.cnsl.log('[Publisher] Remove peerConnection ... peerConnection already removed.', this.peerConnection);
                 }
                 if (this.wsConnection) {
                     this.wsConnection.close();
-                    console.log('[Publisher] Remove wsConnection ... calling close()', this.wsConnection);
+                    utils_1.cnsl.log('[Publisher] Remove wsConnection ... calling close()', this.wsConnection);
                 }
                 else {
-                    console.log('[Publisher] Remove wsConnection ... wsConnection already removed.');
+                    utils_1.cnsl.log('[Publisher] Remove wsConnection ... wsConnection already removed.');
                 }
                 this.peerConnection = undefined;
                 this.wsConnection = undefined;
                 this._stopStream();
                 this.statusListener && this.statusListener();
-                console.log("[Publisher] Disconnected");
+                utils_1.cnsl.log("[Publisher] Disconnected");
                 return [2 /*return*/];
             });
         });
     };
     WebRTCPublisher.prototype._stopStream = function () {
         // if there is a localStream object, and they are no longer used.
-        console.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']');
+        utils_1.cnsl.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']');
         if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
-            console.log('[Publisher] Trying to stop stream');
+            utils_1.cnsl.log('[Publisher] Trying to stop stream');
             var ls = this.localStream;
             if (ls.stop) {
                 ls.stop();
-                console.log('[Publisher] Stopping localStream object.');
+                utils_1.cnsl.log('[Publisher] Stopping localStream object.');
             }
             else {
                 for (var _i = 0, _a = this.localStream.getTracks(); _i < _a.length; _i++) {
                     var track = _a[_i];
                     track.stop();
-                    console.log('[Publisher] Stopping localStream\'s track:', track);
+                    utils_1.cnsl.log('[Publisher] Stopping localStream\'s track:', track);
                 }
             }
             this.localStream = undefined;
-            console.log('[Publisher] Unbind local stream');
+            utils_1.cnsl.log('[Publisher] Unbind local stream');
         }
     };
     return WebRTCPublisher;

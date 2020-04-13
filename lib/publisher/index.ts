@@ -1,7 +1,7 @@
 import { WebRTCConfiguration } from '../interface'
 import { SDPMessageProcessor } from './SDPMessageProcessor'
 import { forEach } from 'lodash'
-import { supportGetUserMedia, queryForCamera, getUserMedia, createWebSocket } from '../utils'
+import { supportGetUserMedia, queryForCamera, getUserMedia, createWebSocket, cnsl } from '../utils'
 import { Logger } from '../logger';
 
 export class WebRTCPublisher {
@@ -95,11 +95,11 @@ export class WebRTCPublisher {
     // Update constraints.
     this.currentContraints = mediaStreamConstraints
 
-    console.log('WebRTC Handler started (agent=', this.userAgent, this.currentContraints, ')')
+    cnsl.log('WebRTC Handler started (agent=', this.userAgent, this.currentContraints, ')')
     queryForCamera(this.streamSourceConstraints)
       .then(hasCamera => this.isCameraMuted = !hasCamera)
       .catch(error => {
-        console.error('[Publisher] Unable to locate Camera', error)
+        cnsl.error('[Publisher] Unable to locate Camera', error)
       })
   }
 
@@ -107,11 +107,11 @@ export class WebRTCPublisher {
     const current = JSON.stringify(this.currentContraints)
     const target = JSON.stringify(constraints)
     if (!force && current === target) {
-      console.log('[Publisher] Constraints already matched. ignore switchStream request.')
+      cnsl.log('[Publisher] Constraints already matched. ignore switchStream request.')
       return
     }
     if (!RTCRtpSender.prototype.replaceTrack) {
-      console.log('[Publisher] Browser does not support switching stream on the fly.')
+      cnsl.log('[Publisher] Browser does not support switching stream on the fly.')
       return
     }
     this.currentContraints = constraints
@@ -153,7 +153,7 @@ export class WebRTCPublisher {
       try {
         this.videoElement.srcObject = stream
       } catch(elementError) {
-        console.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', this.videoElement, stream)
+        cnsl.error('[Publisher] attaching video.srcObject failed, Fallback to src ...', this.videoElement, stream)
         this.videoElement.src = window.URL.createObjectURL(stream)
       }
     }
@@ -199,11 +199,11 @@ export class WebRTCPublisher {
    */
   public async connect(streamName: string) {
     try {
-      console.log('Trying to connect with ', streamName)
+      cnsl.log('Trying to connect with ', streamName)
       this._lastError = undefined
       this.statusListener && this.statusListener()
       await this._connect(streamName)
-      console.log('Publishing stream', streamName)
+      cnsl.log('Publishing stream', streamName)
     } catch (error) {
       // handle error
       this._reportError(error)
@@ -236,10 +236,10 @@ export class WebRTCPublisher {
     let wsConnection = await createWebSocket(wsURL)
     wsConnection.binaryType = 'arraybuffer'
 
-    wsConnection.onclose = () => console.log('[Publisher] wsConnection.onclose')
+    wsConnection.onclose = () => cnsl.log('[Publisher] wsConnection.onclose')
 
     wsConnection.onerror = (evt) => {
-      console.log("[Publisher] wsConnection.onerror: "+JSON.stringify(evt));
+      cnsl.log("[Publisher] wsConnection.onerror: "+JSON.stringify(evt));
       this._reportError(new Error(JSON.stringify(evt)))
     }
 
@@ -247,14 +247,14 @@ export class WebRTCPublisher {
      * await this when peer connection are well established.
      */
     const negotiationClosure = (offerMessage: string) => new Promise<void>((resolve, reject) => {
-      console.log('[Publisher] enter nego closure!')
+      cnsl.log('[Publisher] enter nego closure!')
       wsConnection.onmessage = (evt: any) => {
         // Parse incoming message.
         const msgJSON = JSON.parse(evt.data)
         const msgStatus = Number(msgJSON['status'])
         const msgCommand = msgJSON['command']
 
-        console.log('[Publisher] Incoming message', msgCommand)
+        cnsl.log('[Publisher] Incoming message', msgCommand)
 
         Logger.wrap('[Publisher] wsConnection.onMessage', async (console) => {
 
@@ -297,14 +297,14 @@ export class WebRTCPublisher {
     // save it.
     this.wsConnection = wsConnection
 
-    console.log('[Publisher] wsConnection ready!')
+    cnsl.log('[Publisher] wsConnection ready!')
     try {
       // Create Peer Connection Object
       const { pc: _pc, pcConnectedPromise } = this._createPeerConnection()
       
       // Create offer
       const description = await _pc.createOffer()
-      console.log('[Publisher] offer created!', description)
+      cnsl.log('[Publisher] offer created!', description)
       
       // SDP Munging - hijack SDP message to produce a selected SDP.
       if (this.enhanceMode === 'auto' || this.enhanceMode === true) {
@@ -322,17 +322,17 @@ export class WebRTCPublisher {
         })
         
         if (this.enhanceMode === 'auto' && SDPMessageProcessor.isCorrupted(description.sdp)) {
-          console.log('[Publisher] Bad SDP: ', description.sdp)
-          console.log('[Publisher] ... revert')
+          cnsl.log('[Publisher] Bad SDP: ', description.sdp)
+          cnsl.log('[Publisher] ... revert')
           description.sdp = originalSdp
         } else {
-          console.log('[Publisher] Auto Enhance SDPMessage is valid.')
+          cnsl.log('[Publisher] Auto Enhance SDPMessage is valid.')
         }
-        console.log('[Publisher] Enhance mode updated!')
+        cnsl.log('[Publisher] Enhance mode updated!')
       }
         
       await _pc.setLocalDescription(description)
-      console.log('[Publisher] Assigned local description!')
+      cnsl.log('[Publisher] Assigned local description!')
       
       // send offer back with enhanced SDP
       const offerMessage = '{"direction":"publish", "command":"sendOffer", "streamInfo":'+JSON.stringify(streamInfo)+', "sdp":'+JSON.stringify(description)+', "userData":'+JSON.stringify(this.userData)+'}'
@@ -340,7 +340,7 @@ export class WebRTCPublisher {
       this.peerConnection = _pc
       this.statusListener && this.statusListener()
       
-      console.log('[Publisher] Publishing with streamName=', streamName)
+      cnsl.log('[Publisher] Publishing with streamName=', streamName)
 
       // Waiting for Message result.
       await negotiationClosure(offerMessage)
@@ -348,7 +348,7 @@ export class WebRTCPublisher {
       // Waiting for Connected state
       await pcConnectedPromise
     } catch(error) {
-      console.error('[Publisher] Publishing stream failed', error)
+      cnsl.error('[Publisher] Publishing stream failed', error)
       throw error
     }
   }
@@ -366,7 +366,7 @@ export class WebRTCPublisher {
     const peerConnection = new RTCPeerConnection({ iceServers: [] })
     peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
       if (event.candidate != null) {
-        console.log(`[Publisher] [PC] onIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
+        cnsl.log(`[Publisher] [PC] onIceCandidate: ${JSON.stringify({'ice': event.candidate})}`)
       }
     }
 
@@ -378,29 +378,29 @@ export class WebRTCPublisher {
           hostCandidate: event.hostCandidate,
           url: event.url
         }
-        console.error(`[Publisher] [PC] onIceCandidateError: ${JSON.stringify(info)}`)
+        cnsl.error(`[Publisher] [PC] onIceCandidateError: ${JSON.stringify(info)}`)
         if (event.errorCode >= 300 && event.errorCode <= 699) {
           // STUN errors are in the range 300-699. See RFC 5389, section 15.6
           // for a list of codes. TURN adds a few more error codes; see
           // RFC 5766, section 15 for details.
-          console.error('[Publisher] [PC] ... STUN errors.')
+          cnsl.error('[Publisher] [PC] ... STUN errors.')
         }
         else if (event.errorCode >= 700 && event.errorCode <= 799) {
           // Server could not be reached; a specific error number is
           // provided but these are not yet specified.
-          console.error('[Publisher] [PC] ... server could not be reached.')
+          cnsl.error('[Publisher] [PC] ... server could not be reached.')
         }
       }
 
       peerConnection.onsignalingstatechange = (ev: Event) => {
         const state: any = peerConnection.signalingState
-        console.log(`[Publisher] [PC] onSignalingStateChange ⇀ ${state}`)
+        cnsl.log(`[Publisher] [PC] onSignalingStateChange ⇀ ${state}`)
         this.statusListener && this.statusListener()
       }
 
       peerConnection.oniceconnectionstatechange = (ev: Event) => {
         const state: any = peerConnection.iceConnectionState
-        console.log(`[Publisher] [PC] onIceConnectionStateChange ⇀ ${state}`)
+        cnsl.log(`[Publisher] [PC] onIceConnectionStateChange ⇀ ${state}`)
         this.statusListener && this.statusListener()
       }
 
@@ -412,7 +412,7 @@ export class WebRTCPublisher {
       let isResolved = false
       peerConnection.onconnectionstatechange = (ev: Event) => {
         const state = peerConnection.connectionState
-        console.log(`[Publisher] [PC] onConnectionStateChange ⇀ ${state}`)
+        cnsl.log(`[Publisher] [PC] onConnectionStateChange ⇀ ${state}`)
         this.statusListener && this.statusListener()
         if (isResolved) return
         if (state === 'connected') {
@@ -449,15 +449,15 @@ export class WebRTCPublisher {
   public async disconnect() {
     if (this.peerConnection) {
       this.peerConnection.close()
-      console.log('[Publisher] Remove peerConnection ... calling close()', this.peerConnection)
+      cnsl.log('[Publisher] Remove peerConnection ... calling close()', this.peerConnection)
     } else {
-      console.log('[Publisher] Remove peerConnection ... peerConnection already removed.', this.peerConnection)
+      cnsl.log('[Publisher] Remove peerConnection ... peerConnection already removed.', this.peerConnection)
     }
     if (this.wsConnection) {
       this.wsConnection.close()
-      console.log('[Publisher] Remove wsConnection ... calling close()', this.wsConnection)
+      cnsl.log('[Publisher] Remove wsConnection ... calling close()', this.wsConnection)
     } else {
-      console.log('[Publisher] Remove wsConnection ... wsConnection already removed.')
+      cnsl.log('[Publisher] Remove wsConnection ... wsConnection already removed.')
     }
 
     this.peerConnection = undefined
@@ -466,26 +466,26 @@ export class WebRTCPublisher {
     this._stopStream()
     this.statusListener && this.statusListener()
 
-    console.log("[Publisher] Disconnected")
+    cnsl.log("[Publisher] Disconnected")
   }
 
   private _stopStream() {
     // if there is a localStream object, and they are no longer used.
-    console.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']')
+    cnsl.log('[Publisher] stopping stream [localStream=', this.localStream, 'isPreviewEnabled=', this.isPreviewEnabled, 'isPublishing=', this.isPublishing, ']')
     if (this.localStream && !this.isPreviewEnabled && !this.isPublishing) {
-      console.log('[Publisher] Trying to stop stream')
+      cnsl.log('[Publisher] Trying to stop stream')
       const ls = this.localStream as any
       if (ls.stop) {
         ls.stop()
-        console.log('[Publisher] Stopping localStream object.')
+        cnsl.log('[Publisher] Stopping localStream object.')
       } else {
         for(const track of this.localStream.getTracks()) {
           track.stop()
-          console.log('[Publisher] Stopping localStream\'s track:', track)
+          cnsl.log('[Publisher] Stopping localStream\'s track:', track)
         }
       }
       this.localStream = undefined
-      console.log('[Publisher] Unbind local stream')
+      cnsl.log('[Publisher] Unbind local stream')
     }
   }
 }

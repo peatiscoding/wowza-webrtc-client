@@ -16,15 +16,17 @@ export declare class WebRTCPublisher {
     /**
      * Holding = disable microphone only.
      */
-    isHolding: boolean;
-    isCameraMuted: boolean;
-    readonly isPublishing: boolean;
-    readonly isPreviewEnabled: boolean;
-    readonly streamSourceConstraints: MediaStreamConstraints;
-    readonly lastError: Error | undefined;
-    readonly rtcPeerConnectionState: RTCPeerConnectionState | undefined;
-    readonly rtcSignalingState: RTCSignalingState | undefined;
-    readonly rtcIceConnectionState: RTCIceConnectionState | undefined;
+    get isHolding(): boolean;
+    set isHolding(value: boolean);
+    set isCameraMuted(muted: boolean);
+    get isCameraMuted(): boolean;
+    get isPublishing(): boolean;
+    get isPreviewEnabled(): boolean;
+    get streamSourceConstraints(): MediaStreamConstraints;
+    get lastError(): Error | undefined;
+    get rtcPeerConnectionState(): RTCPeerConnectionState | undefined;
+    get rtcSignalingState(): RTCSignalingState | undefined;
+    get rtcIceConnectionState(): RTCIceConnectionState | undefined;
     constructor(config: WebRTCConfiguration, mediaStreamConstraints: MediaStreamConstraints, enhanceMode: 'auto' | boolean, codecMode: 'VPX' | 'H264', statusListener?: (() => void) | undefined);
     switchStream(constraints: MediaStreamConstraints, force?: boolean): Promise<void>;
     /**

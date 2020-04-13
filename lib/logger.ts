@@ -1,4 +1,5 @@
 import { concat } from 'lodash'
+import { cnsl } from './utils'
 
 type Message = ['log'|'info'|'error', any[]]
 
@@ -8,7 +9,7 @@ export class Logger {
   public static async wrap<T>(domain: string, callback: (logger: Logger) => Promise<T>): Promise<T> {
     const lg = new Logger(domain)
     try {
-      console.log('Start')
+      cnsl.log('Start')
       return await callback(lg)
     } catch(error) {
       lg.error(error)
@@ -35,7 +36,7 @@ export class Logger {
 
   public flush() {
     this.messages.forEach((element: Message) => {
-      console && console[element[0]] && console[element[0]].apply(console, element[1] as any)
+      cnsl && cnsl[element[0]] && cnsl[element[0]].apply(cnsl, element[1] as any)
     })
   }
 

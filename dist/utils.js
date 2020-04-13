@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -34,7 +35,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isMobileBrowser = function () {
     // Check my self as agent
@@ -69,7 +69,7 @@ exports.supportGetUserMedia = function () {
  *
  * @param constraints
  */
-exports.getUserMedia = function (constraints) { return __awaiter(_this, void 0, void 0, function () {
+exports.getUserMedia = function (constraints) { return __awaiter(void 0, void 0, void 0, function () {
     var error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
@@ -103,7 +103,7 @@ exports.getUserMedia = function (constraints) { return __awaiter(_this, void 0, 
  *
  * @param constraints
  */
-exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0, void 0, function () {
+exports.queryForCamera = function (constraints) { return __awaiter(void 0, void 0, void 0, function () {
     var devices, media, m;
     return __generator(this, function (_a) {
         switch (_a.label) {
@@ -130,6 +130,36 @@ exports.queryForCamera = function (constraints) { return __awaiter(_this, void 0
         }
     });
 }); };
+exports.cnsl = {
+    log: function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        console.log.apply(console, args);
+    },
+    warn: function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        console.warn.apply(console, args);
+    },
+    error: function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        console.error.apply(console, args);
+    },
+    info: function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        console.info.apply(console, args);
+    }
+};
 /**
  * Resolve reason as readable string.
  *

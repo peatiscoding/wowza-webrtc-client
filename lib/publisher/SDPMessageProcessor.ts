@@ -1,3 +1,5 @@
+import { cnsl } from '../utils'
+
 export class SDPMessageProcessor {
 
   // Buffer and Flags
@@ -9,7 +11,7 @@ export class SDPMessageProcessor {
   }
 
   public enhance(_sdpStr?: string, enhanceData?: any): string {
-    console.log('[Publisher] Enhancing SDP ...', this.videoMode, this.audioMode)
+    cnsl.log('[Publisher] Enhancing SDP ...', this.videoMode, this.audioMode)
     let sdpStr = _sdpStr || ''
     let sdpLines = sdpStr.split(/\r\n/);
     let sdpSection: 'audio'|'video'|'bandwidth'|'header' = 'header'
@@ -124,7 +126,7 @@ export class SDPMessageProcessor {
    * @param sdp 
    */
   private forceH264(sdp: string): string {
-    console.log(`Forcing SDP: ${sdp}`)
+    cnsl.log(`Forcing SDP: ${sdp}`)
     return sdp.replace(/profile-level-id=(42001f|64C016)/i, '42e01f')
         // .replace(/([\r\n]{2})[^=]+([a-z]=)/g, '$1$2')
   }

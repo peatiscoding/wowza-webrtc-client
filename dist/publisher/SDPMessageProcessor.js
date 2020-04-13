@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+var utils_1 = require("../utils");
 var SDPMessageProcessor = /** @class */ (function () {
     function SDPMessageProcessor(videoMode, audioMode) {
         this.videoMode = videoMode;
@@ -10,7 +11,7 @@ var SDPMessageProcessor = /** @class */ (function () {
         this.videoIndex = -1;
     }
     SDPMessageProcessor.prototype.enhance = function (_sdpStr, enhanceData) {
-        console.log('[Publisher] Enhancing SDP ...', this.videoMode, this.audioMode);
+        utils_1.cnsl.log('[Publisher] Enhancing SDP ...', this.videoMode, this.audioMode);
         var sdpStr = _sdpStr || '';
         var sdpLines = sdpStr.split(/\r\n/);
         var sdpSection = 'header';
@@ -116,7 +117,7 @@ var SDPMessageProcessor = /** @class */ (function () {
      * @param sdp
      */
     SDPMessageProcessor.prototype.forceH264 = function (sdp) {
-        console.log("Forcing SDP: " + sdp);
+        utils_1.cnsl.log("Forcing SDP: " + sdp);
         return sdp.replace(/profile-level-id=(42001f|64C016)/i, '42e01f');
         // .replace(/([\r\n]{2})[^=]+([a-z]=)/g, '$1$2')
     };

@@ -20,6 +20,12 @@ export declare const getUserMedia: (constraints: MediaStreamConstraints) => Prom
  * @param constraints
  */
 export declare const queryForCamera: (constraints: MediaStreamConstraints) => Promise<boolean>;
+export declare const cnsl: {
+    log: (...args: any) => void;
+    warn: (...args: any) => void;
+    error: (...args: any) => void;
+    info: (...args: any) => void;
+};
 /**
  * Return a well established WebSocket connection.
  *
