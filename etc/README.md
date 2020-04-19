@@ -1,0 +1,1 @@
+As file progress. Use this `webrtc.js` to compare implementation of TypeScript version in `publisher/index.ts` and `publisher/SDPMessageProcessor.ts`
