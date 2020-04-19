@@ -118,7 +118,7 @@ var SDPMessageProcessor = /** @class */ (function () {
      */
     SDPMessageProcessor.prototype.forceH264 = function (sdp) {
         utils_1.cnsl.log("Forcing SDP: " + sdp);
-        return sdp.replace(/profile-level-id=(42001f|64C016)/i, '42e01f');
+        return sdp.replace(/(profile-level-id)=(42001f|64C016)/i, '$1=42e01f');
         // .replace(/([\r\n]{2})[^=]+([a-z]=)/g, '$1$2')
     };
     /**
