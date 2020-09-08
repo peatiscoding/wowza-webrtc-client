@@ -20,6 +20,10 @@ export class WebRTCPublisher {
   private statusCameraMuted: boolean = true
   private _lastError?: Error = undefined
 
+  public reconfig(config: WebRTCConfiguration) {
+    this.config = config
+  }
+
   /**
    * Holding = disable microphone only.
    */

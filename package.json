@@ -1,6 +1,6 @@
 {
   "name": "wowza-webrtc-client",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "WoWza WebRTC Player/Client.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -17,7 +17,7 @@
     "url": "git+https://github.com/peatiscoding/wowza-webrtc-client"
   },
   "devDependencies": {
-    "typescript": "^3.3.3333"
+    "typescript": "^3.8"
   },
   "dependencies": {
     "lodash": "^4.17.11"
