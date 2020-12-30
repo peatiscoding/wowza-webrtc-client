@@ -13,6 +13,7 @@ export declare class WebRTCPublisher {
     private videoElement?;
     private statusCameraMuted;
     private _lastError?;
+    reconfig(config: WebRTCConfiguration): void;
     /**
      * Holding = disable microphone only.
      */

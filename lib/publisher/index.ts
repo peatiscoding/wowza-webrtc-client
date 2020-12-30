@@ -416,7 +416,7 @@ export class WebRTCPublisher {
       let isResolved = false
       peerConnection.onconnectionstatechange = (ev: Event) => {
         const state = peerConnection.connectionState
-        cnsl.log(`[Publisher] [PC] onConnectionStateChange ⇀ ${state}`)
+        cnsl.log(`[Publisher] [PC] onConnectionStateChange ⇀ ${state}`, ev)
         this.statusListener && this.statusListener()
         if (isResolved) return
         if (state === 'connected') {

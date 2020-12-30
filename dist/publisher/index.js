@@ -77,6 +77,9 @@ var WebRTCPublisher = /** @class */ (function () {
             utils_1.cnsl.error('[Publisher] Unable to locate Camera', error);
         });
     }
+    WebRTCPublisher.prototype.reconfig = function (config) {
+        this.config = config;
+    };
     Object.defineProperty(WebRTCPublisher.prototype, "isHolding", {
         /**
          * Holding = disable microphone only.
@@ -518,7 +521,7 @@ var WebRTCPublisher = /** @class */ (function () {
             var isResolved = false;
             peerConnection.onconnectionstatechange = function (ev) {
                 var state = peerConnection.connectionState;
-                utils_1.cnsl.log("[Publisher] [PC] onConnectionStateChange \u21C0 " + state);
+                utils_1.cnsl.log("[Publisher] [PC] onConnectionStateChange \u21C0 " + state, ev);
                 _this.statusListener && _this.statusListener();
                 if (isResolved)
                     return;
